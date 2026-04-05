@@ -1,0 +1,3235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval';">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>财神大陆 - 管理后台（完整版）</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* 侧边栏 */
+        .sidebar {
+            width: 220px;
+            background: #16213e;
+            padding: 20px 0;
+        }
+        
+        .logo {
+            text-align: center;
+            padding: 0 20px 20px;
+            border-bottom: 1px solid #0f3460;
+            margin-bottom: 20px;
+        }
+        
+        .logo h1 {
+            font-size: 18px;
+            color: #e94560;
+        }
+        
+        .logo span {
+            font-size: 12px;
+            color: #888;
+        }
+        
+        .nav-menu {
+            list-style: none;
+        }
+        
+        .nav-menu li {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+        
+        .nav-menu li:hover,
+        .nav-menu li.active {
+            background: #0f3460;
+            border-left-color: #e94560;
+        }
+        
+        .nav-menu i {
+            margin-right: 10px;
+            width: 20px;
+            display: inline-block;
+        }
+        
+        /* 主内容区 */
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #0f3460;
+        }
+        
+        .header h2 {
+            font-size: 24px;
+        }
+        
+        .admin-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #e94560;
+        }
+        
+        .stat-card h3 {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .stat-card .change {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        
+        .stat-card .change.up { color: #4ade80; }
+        .stat-card .change.down { color: #f87171; }
+        
+        /* 面板 */
+        .panel {
+            background: #16213e;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .panel-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #0f3460;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .panel-title {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .panel-body {
+            padding: 20px;
+        }
+        
+        /* 表格 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #0f3460;
+        }
+        
+        th {
+            color: #888;
+            font-weight: normal;
+        }
+        
+        tr:hover {
+            background: #0f3460;
+        }
+        
+        /* 按钮 */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #e94560;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #ff6b6b;
+        }
+        
+        .btn-success {
+            background: #4ade80;
+            color: #1a1a2e;
+        }
+        
+        .btn-danger {
+            background: #f87171;
+            color: white;
+        }
+        
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        
+        /* 标签 */
+        .badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .badge-success { background: #4ade80; color: #1a1a2e; }
+        .badge-danger { background: #f87171; color: white; }
+        .badge-warning { background: #fbbf24; color: #1a1a2e; }
+        .badge-info { background: #60a5fa; color: white; }
+        
+        /* 搜索框 */
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .search-box input,
+        .search-box select {
+            padding: 8px 12px;
+            border: 1px solid #0f3460;
+            background: #1a1a2e;
+            color: #eee;
+            border-radius: 4px;
+        }
+        
+        .search-box input {
+            flex: 1;
+        }
+        
+        /* 分页 */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 20px;
+        }
+        
+        .pagination button {
+            padding: 6px 12px;
+            border: 1px solid #0f3460;
+            background: #16213e;
+            color: #eee;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        
+        .pagination button.active,
+        .pagination button:hover {
+            background: #e94560;
+            border-color: #e94560;
+        }
+        
+        /* 响应式 */
+        @media (max-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 60px;
+            }
+            .sidebar .logo h1,
+            .nav-menu span {
+                display: none;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ===== 登录覆盖层 ===== -->
+    <div id="login-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#1a1a2e;z-index:9999;display:flex;align-items:center;justify-content:center">
+        <div style="background:#2a2a3e;padding:40px;border-radius:16px;text-align:center;width:360px;box-shadow:0 10px 40px rgba(0,0,0,0.5)">
+            <div style="font-size:48px;margin-bottom:12px">🏮</div>
+            <h2 style="color:#f5a623;margin-bottom:8px">财神大陆</h2>
+            <p style="color:#888;font-size:13px;margin-bottom:24px">管理后台 v2.0</p>
+            <div style="margin-bottom:12px">
+                <input type="text" id="admin-username" placeholder="用户名" value="testuser"
+                    style="width:100%;padding:10px 14px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:8px;font-size:14px;box-sizing:border-box">
+            </div>
+            <div style="margin-bottom:12px">
+                <input type="password" id="admin-password" placeholder="密码" value="123456"
+                    style="width:100%;padding:10px 14px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:8px;font-size:14px;box-sizing:border-box">
+            </div>
+            <div style="margin-bottom:12px">
+                <input type="text" id="api-base-input" placeholder="API地址" value="http://localhost:3000"
+                    style="width:100%;padding:10px 14px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:8px;font-size:14px;box-sizing:border-box">
+            </div>
+            <button onclick="adminLogin()" style="width:100%;padding:12px;background:linear-gradient(135deg,#f5a623,#e6951e);color:#000;border:none;border-radius:8px;font-size:15px;font-weight:bold;cursor:pointer">
+                登录管理后台
+            </button>
+            <div id="login-error" style="color:#e74c3c;font-size:12px;margin-top:10px;display:none"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h1>财神大陆</h1>
+                <span>管理后台（完整版）</span>
+            </div>
+            <ul class="nav-menu">
+                <li class="active" onclick="showPage('dashboard')">
+                    <i>📊</i><span>数据概览</span>
+                </li>
+                <li onclick="showPage('users')">
+                    <i>👥</i><span>用户管理</span>
+                </li>
+                <li onclick="showPage('sects')">
+                    <i>🏛️</i><span>门派管理</span>
+                </li>
+                <li onclick="showPage('mentors')">
+                    <i>👨‍🏫</i><span>师徒管理</span>
+                </li>
+                <li onclick="showPage('trades')">
+                    <i>💰</i><span>交易管理</span>
+                </li>
+                <li onclick="showPage('pvp')">
+                    <i>⚔️</i><span>PVP管理</span>
+                </li>
+                <li onclick="showPage('events')">
+                    <i>🎉</i><span>活动管理</span>
+                </li>
+                <li onclick="showPage('anticheat')">
+                    <i>🛡️</i><span>反作弊</span>
+                </li>
+                <li onclick="showPage('robots')">
+                    <i>🤖</i><span>机器人</span>
+                </li>
+                <li onclick="showPage('recharge')">
+                    <i>💎</i><span>充值管理</span>
+                </li>
+                <li onclick="showPage('orders')">
+                    <i>📦</i><span>订单管理</span>
+                </li>
+                <li onclick="showPage('announcements')">
+                    <i>📢</i><span>公告管理</span>
+                </li>
+                <li onclick="showPage('logs')">
+                    <i>📝</i><span>系统日志</span>
+                </li>
+                <li onclick="showPage('settings')">
+                    <i>⚙️</i><span>系统设置</span>
+                </li>
+                <!-- ===== 新增页面 ===== -->
+                <li style="border-top:1px solid rgba(255,255,255,0.1);margin:8px 0;padding:0"></li>
+                <li onclick="showPage('analytics')"><span>📊 埋点管理</span></li>
+                <li onclick="showPage('products')"><span>🏪 商品管理</span></li>
+                <li onclick="showPage('items')"><span>🎒 道具管理</span></li>
+                <li onclick="showPage('deities')"><span>🏮 财神管理</span></li>
+                <li onclick="showPage('stories')"><span>📖 故事管理</span></li>
+                <li onclick="showPage('creatures')"><span>🐾 生灵管理</span></li>
+                <li onclick="showPage('skillmgr')"><span>⚡ 技能管理</span></li>
+                <li onclick="showPage('equipmgr')"><span>🗡️ 装备管理</span></li>
+                <li onclick="showPage('domains')"><span>🌍 财域管理</span></li>
+                <li onclick="showPage('quests')"><span>🏆 任务成就</span></li>
+                <li onclick="showPage('decoration')"><span>🎨 装修管理</span></li>
+
+            </ul>
+        </aside>
+
+        <!-- 主内容 -->
+        <main class="main-content">
+            <!-- 数据概览页面 -->
+            <div id="dashboard" class="page">
+                <div class="header">
+                    <h2>📊 数据概览</h2>
+                    <div class="admin-info">
+                        <span>管理员：admin</span>
+                        <button class="btn btn-sm">退出</button>
+                    </div>
+                </div>
+
+                <!-- 统计卡片 -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>总用户数</h3>
+                        <div class="value">12,580</div>
+                        <div class="change up">↑ 5.2% 较昨日</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>今日活跃</h3>
+                        <div class="value">3,240</div>
+                        <div class="change up">↑ 8.1% 较昨日</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>当前在线</h3>
+                        <div class="value">856</div>
+                        <div class="change down">↓ 2.3% 较上小时</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>今日收入</h3>
+                        <div class="value">¥25,800</div>
+                        <div class="change up">↑ 12.5% 较昨日</div>
+                    </div>
+                </div>
+
+                <!-- 系统状态 -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">系统状态监控</span>
+                        <span class="badge badge-success">运行正常</span>
+                    </div>
+                    <div class="panel-body">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>系统模块</th>
+                                    <th>状态</th>
+                                    <th>数据量</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>等级系统</td>
+                                    <td><span class="badge badge-success">正常</span></td>
+                                    <td>12,580 用户</td>
+                                    <td><button class="btn btn-sm btn-primary">查看</button></td>
+                                </tr>
+                                <tr>
+                                    <td>十二财域</td>
+                                    <td><span class="badge badge-success">正常</span></td>
+                                    <td>12 个域</td>
+                                    <td><button class="btn btn-sm btn-primary">查看</button></td>
+                                </tr>
+                                <tr>
+                                    <td>门派系统</td>
+                                    <td><span class="badge badge-success">正常</span></td>
+                                    <td>12 门派 / 1,250 成员</td>
+                                    <td><button class="btn btn-sm btn-primary">查看</button></td>
+                                </tr>
+                                <tr>
+                                    <td>师徒系统</td>
+                                    <td><span class="badge badge-success">正常</span></td>
+                                    <td>580 对师徒</td>
+                                    <td><button class="btn btn-sm btn-primary">查看</button></td>
+                                </tr>
+                                <tr>
+                                    <td>交易市场</td>
+                                    <td><span class="badge badge-success">正常</span></td>
+                                    <td>320 摊位 / 150 拍卖</td>
+                                    <td><button class="btn btn-sm btn-primary">查看</button></td>
+                                </tr>
+                                <tr>
+                                    <td>PVP系统</td>
+                                    <td><span class="badge badge-success">正常</span></td>
+                                    <td>今日 1,520 场对战</td>
+                                    <td><button class="btn btn-sm btn-primary">查看</button></td>
+                                </tr>
+                                <tr>
+                                    <td>活动系统</td>
+                                    <td><span class="badge badge-warning">财神诞进行中</span></td>
+                                    <td>5,000 参与</td>
+                                    <td><button class="btn btn-sm btn-primary">管理</button></td>
+                                </tr>
+                                <tr>
+                                    <td>反作弊系统</td>
+                                    <td><span class="badge badge-success">正常</span></td>
+                                    <td>2 可疑 / 0 封禁</td>
+                                    <td><button class="btn btn-sm btn-primary">查看</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 其他页面占位 -->
+            <div id="users" class="page" style="display:none;">
+                <div class="header">
+                    <h2>👥 用户管理</h2>
+                </div>
+                <div class="search-box">
+                    <input type="text" placeholder="搜索用户ID/昵称/手机号">
+                    <select>
+                        <option value="">全部等级</option>
+                        <option value="1-10">1-10级</option>
+                        <option value="11-30">11-30级</option>
+                        <option value="31-60">31-60级</option>
+                        <option value="61-99">61-99级</option>
+                    </select>
+                    <select>
+                        <option value="">全部境界</option>
+                        <option>灵种入体</option>
+                        <option>灵根初萌</option>
+                        <option>灵识渐明</option>
+                        <option>灵体凝聚</option>
+                        <option>财源启灵</option>
+                        <option>炼气期·聚气生财</option>
+                        <option>筑基期·筑财为基</option>
+                        <option>结丹期·凝结财丹</option>
+                        <option>元婴期·元财化婴</option>
+                        <option>化神期·财神化神</option>
+                        <option>炼虚期·炼虚聚财</option>
+                        <option>合体期·合体生财</option>
+                        <option>大乘期·大乘散财</option>
+                        <option>真仙期·财道真仙</option>
+                    </select>
+                    <button class="btn btn-primary">搜索</button>
+                </div>
+                <div class="panel">
+                    <div class="panel-body">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>玩家ID</th>
+                                    <th>用户名</th>
+                                    <th>昵称</th>
+                                    <th>等级</th>
+                                    <th>境界</th>
+                                    <th>香火钱</th>
+                                    <th>元宝</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1001</td>
+                                    <td>财神小玩家</td>
+                                    <td>45</td>
+                                    <td>化神期</td>
+                                    <td>520,000</td>
+                                    <td>5,200</td>
+                                    <td><span class="badge badge-success">正常</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary">详情</button>
+                                        <button class="btn btn-sm btn-danger">封禁</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>1002</td>
+                                    <td>修仙大佬</td>
+                                    <td>78</td>
+                                    <td>大乘期</td>
+                                    <td>1,250,000</td>
+                                    <td>12,500</td>
+                                    <td><span class="badge badge-success">正常</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary">详情</button>
+                                        <button class="btn btn-sm btn-danger">封禁</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="pagination">
+                            <button>上一页</button>
+                            <button class="active">1</button>
+                            <button>2</button>
+                            <button>3</button>
+                            <button>下一页</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 其他页面简略展示 -->
+            <div id="sects" class="page" style="display:none;">
+                <div class="header">
+                    <h2>🏛️ 门派管理</h2>
+                    <div>
+                        <button class="btn btn-primary" onclick="alert('创建门派')">创建门派</button>
+                        <button class="btn btn-success" onclick="alert('门派联赛')">发起联赛</button>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card"><h3>总门派数</h3><div class="value">12</div><div class="change">已满编</div></div>
+                    <div class="stat-card"><h3>总成员</h3><div class="value">1,250</div><div class="change up">↑ 28 今日新增</div></div>
+                    <div class="stat-card"><h3>门派战</h3><div class="value">6</div><div class="change">本周场次</div></div>
+                    <div class="stat-card"><h3>门派资金总量</h3><div class="value">8,500万</div><div class="change up">↑ 5% 较上周</div></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><span class="panel-title">门派列表</span></div>
+                    <div class="panel-body">
+                        <table>
+                            <thead><tr><th>ID</th><th>门派名</th><th>掌门</th><th>成员数</th><th>门派等级</th><th>资金</th><th>状态</th><th>操作</th></tr></thead>
+                            <tbody>
+                                <tr><td>1</td><td>天机阁</td><td>玄机子(Lv.99)</td><td>120/150</td><td>10</td><td>1,200万</td><td><span class="badge badge-success">活跃</span></td><td><button class="btn btn-sm btn-primary">管理</button> <button class="btn btn-sm btn-danger">解散</button></td></tr>
+                                <tr><td>2</td><td>万宝楼</td><td>金算盘(Lv.95)</td><td>115/150</td><td>9</td><td>980万</td><td><span class="badge badge-success">活跃</span></td><td><button class="btn btn-sm btn-primary">管理</button> <button class="btn btn-sm btn-danger">解散</button></td></tr>
+                                <tr><td>3</td><td>聚宝盆</td><td>招财猫(Lv.88)</td><td>98/120</td><td>8</td><td>750万</td><td><span class="badge badge-success">活跃</span></td><td><button class="btn btn-sm btn-primary">管理</button> <button class="btn btn-sm btn-danger">解散</button></td></tr>
+                                <tr><td>4</td><td>如意坊</td><td>如意仙(Lv.82)</td><td>85/120</td><td>7</td><td>620万</td><td><span class="badge badge-warning">低活跃</span></td><td><button class="btn btn-sm btn-primary">管理</button> <button class="btn btn-sm btn-danger">解散</button></td></tr>
+                                <tr><td>5</td><td>摸鱼派</td><td>咸鱼王(Lv.45)</td><td>12/50</td><td>2</td><td>5万</td><td><span class="badge badge-danger">濒临解散</span></td><td><button class="btn btn-sm btn-primary">管理</button> <button class="btn btn-sm btn-danger">解散</button></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="mentors" class="page" style="display:none;">
+                <div class="header"><h2>👨‍🏫 师徒管理</h2></div>
+                <div class="stats-grid">
+                    <div class="stat-card"><h3>师徒对数</h3><div class="value">580</div><div class="change up">↑ 12 今日新增</div></div>
+                    <div class="stat-card"><h3>今日出师</h3><div class="value">8</div><div class="change up">↑ 3 较昨日</div></div>
+                    <div class="stat-card"><h3>满意度</h3><div class="value">92%</div><div class="change up">↑ 1.5%</div></div>
+                    <div class="stat-card"><h3>平均传功</h3><div class="value">15次/天</div><div class="change">稳定</div></div>
+                </div>
+                <div class="search-box">
+                    <input type="text" placeholder="搜索师傅/徒弟ID或名称">
+                    <select><option value="">全部状态</option><option>学习中</option><option>已出师</option><option>已解除</option></select>
+                    <button class="btn btn-primary">搜索</button>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><span class="panel-title">师徒关系列表</span></div>
+                    <div class="panel-body">
+                        <table>
+                            <thead><tr><th>师傅</th><th>师傅等级</th><th>徒弟</th><th>徒弟等级</th><th>持续天数</th><th>传功次数</th><th>状态</th><th>操作</th></tr></thead>
+                            <tbody>
+                                <tr><td>玄机子</td><td>99</td><td>小明</td><td>35</td><td>30天</td><td>120</td><td><span class="badge badge-success">学习中</span></td><td><button class="btn btn-sm btn-primary">详情</button> <button class="btn btn-sm btn-danger">强制解除</button></td></tr>
+                                <tr><td>金算盘</td><td>95</td><td>旺财</td><td>52</td><td>45天</td><td>180</td><td><span class="badge badge-success">学习中</span></td><td><button class="btn btn-sm btn-primary">详情</button> <button class="btn btn-sm btn-danger">强制解除</button></td></tr>
+                                <tr><td>招财猫</td><td>88</td><td>阿福</td><td>60</td><td>60天</td><td>240</td><td><span class="badge badge-info">已出师</span></td><td><button class="btn btn-sm btn-primary">详情</button></td></tr>
+                                <tr><td>如意仙</td><td>82</td><td>小白</td><td>15</td><td>5天</td><td>20</td><td><span class="badge badge-warning">低活跃</span></td><td><button class="btn btn-sm btn-primary">详情</button> <button class="btn btn-sm btn-danger">强制解除</button></td></tr>
+                            </tbody>
+                        </table>
+                        <div class="pagination"><button>上一页</button><button class="active">1</button><button>2</button><button>3</button><button>下一页</button></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="trades" class="page" style="display:none;">
+                <div class="header">
+                    <h2>💰 交易管理</h2>
+                    <div><button class="btn btn-primary" onclick="alert('导出报表')">导出报表</button></div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card"><h3>今日交易额</h3><div class="value">¥85万</div><div class="change up">↑ 15% 较昨日</div></div>
+                    <div class="stat-card"><h3>活跃摊位</h3><div class="value">320</div><div class="change">占总摊位 64%</div></div>
+                    <div class="stat-card"><h3>拍卖进行中</h3><div class="value">28</div><div class="change up">↑ 5 较昨日</div></div>
+                    <div class="stat-card"><h3>今日税收</h3><div class="value">¥4.2万</div><div class="change up">↑ 8%</div></div>
+                </div>
+                <div class="search-box">
+                    <input type="text" placeholder="搜索交易ID/物品名/用户ID">
+                    <select><option value="">全部类型</option><option>摊位交易</option><option>拍卖交易</option><option>直接交易</option></select>
+                    <select><option value="">全部状态</option><option>进行中</option><option>已完成</option><option>已取消</option><option>有争议</option></select>
+                    <button class="btn btn-primary">搜索</button>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><span class="panel-title">交易记录</span></div>
+                    <div class="panel-body">
+                        <table>
+                            <thead><tr><th>交易ID</th><th>卖家</th><th>买家</th><th>物品</th><th>数量</th><th>单价</th><th>类型</th><th>状态</th><th>时间</th><th>操作</th></tr></thead>
+                            <tbody>
+                                <tr><td>T10001</td><td>玄机子</td><td>旺财</td><td>天机剑</td><td>1</td><td>50,000</td><td><span class="badge badge-info">摊位</span></td><td><span class="badge badge-success">已完成</span></td><td>10:30</td><td><button class="btn btn-sm btn-primary">详情</button></td></tr>
+                                <tr><td>T10002</td><td>金算盘</td><td>-</td><td>聚宝盆碎片</td><td>5</td><td>12,000</td><td><span class="badge badge-warning">拍卖</span></td><td><span class="badge badge-info">进行中</span></td><td>11:15</td><td><button class="btn btn-sm btn-primary">详情</button> <button class="btn btn-sm btn-danger">终止</button></td></tr>
+                                <tr><td>T10003</td><td>小白</td><td>阿福</td><td>回魂丹×10</td><td>10</td><td>500</td><td><span class="badge badge-info">直接</span></td><td><span class="badge badge-success">已完成</span></td><td>12:00</td><td><button class="btn btn-sm btn-primary">详情</button></td></tr>
+                                <tr><td>T10004</td><td>咸鱼王</td><td>招财猫</td><td>金蝉脱壳符</td><td>1</td><td>120,000</td><td><span class="badge badge-warning">拍卖</span></td><td><span class="badge badge-danger">有争议</span></td><td>14:20</td><td><button class="btn btn-sm btn-primary">详情</button> <button class="btn btn-sm btn-danger">仲裁</button></td></tr>
+                            </tbody>
+                        </table>
+                        <div class="pagination"><button>上一页</button><button class="active">1</button><button>2</button><button>3</button><button>下一页</button></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="pvp" class="page" style="display:none;">
+                <div class="header">
+                    <h2>⚔️ PVP管理</h2>
+                    <div>
+                        <button class="btn btn-primary" onclick="alert('排行榜')">查看排行榜</button>
+                        <button class="btn btn-danger" onclick="alert('重置赛季')">重置赛季</button>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card"><h3>今日对战</h3><div class="value">1,520</div><div class="change up">↑ 12% 较昨日</div></div>
+                    <div class="stat-card"><h3>同时在线</h3><div class="value">86</div><div class="change">匹配中</div></div>
+                    <div class="stat-card"><h3>排名赛</h3><div class="value">580</div><div class="change up">↑ 8%</div></div>
+                    <div class="stat-card"><h3>投诉/举报</h3><div class="value">3</div><div class="change down">待处理</div></div>
+                </div>
+                <div class="search-box">
+                    <input type="text" placeholder="搜索对战ID/玩家ID">
+                    <select><option value="">全部类型</option><option>排名赛</option><option>切磋赛</option><option>门派战</option><option>跨服赛</option></select>
+                    <button class="btn btn-primary">搜索</button>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><span class="panel-title">对战记录</span></div>
+                    <div class="panel-body">
+                        <table>
+                            <thead><tr><th>对战ID</th><th>玩家1</th><th>Lv</th><th>玩家2</th><th>Lv</th><th>胜者</th><th>类型</th><th>时长</th><th>时间</th><th>操作</th></tr></thead>
+                            <tbody>
+                                <tr><td>PVP5001</td><td>玄机子</td><td>99</td><td>金算盘</td><td>95</td><td><span class="badge badge-success">玄机子</span></td><td>排名赛</td><td>3m12s</td><td>10:30</td><td><button class="btn btn-sm btn-primary">回放</button></td></tr>
+                                <tr><td>PVP5002</td><td>招财猫</td><td>88</td><td>如意仙</td><td>82</td><td><span class="badge badge-success">如意仙</span></td><td>切磋赛</td><td>1m45s</td><td>11:00</td><td><button class="btn btn-sm btn-primary">回放</button></td></tr>
+                                <tr><td>PVP5003</td><td>旺财</td><td>52</td><td>阿福</td><td>60</td><td><span class="badge badge-danger">阿福(举报)</span></td><td>排名赛</td><td>0m30s</td><td>11:15</td><td><button class="btn btn-sm btn-primary">回放</button> <button class="btn btn-sm btn-danger">处理举报</button></td></tr>
+                                <tr><td>PVP5004</td><td>天机阁</td><td>-</td><td>万宝楼</td><td>-</td><td><span class="badge badge-info">进行中</span></td><td>门派战</td><td>-</td><td>14:00</td><td><button class="btn btn-sm btn-primary">观战</button></td></tr>
+                            </tbody>
+                        </table>
+                        <div class="pagination"><button>上一页</button><button class="active">1</button><button>2</button><button>3</button><button>下一页</button></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="events" class="page" style="display:none;">
+                <div class="header">
+                    <h2>🎉 活动管理</h2>
+                    <div><button class="btn btn-primary" onclick="alert('创建活动')">创建活动</button></div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card"><h3>进行中活动</h3><div class="value">3</div><div class="change">本周</div></div>
+                    <div class="stat-card"><h3>参与人次</h3><div class="value">15,200</div><div class="change up">↑ 25% 较上周</div></div>
+                    <div class="stat-card"><h3>奖励发放</h3><div class="value">¥12万</div><div class="change">本周累计</div></div>
+                    <div class="stat-card"><h3>参与率</h3><div class="value">68%</div><div class="change up">↑ 5%</div></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><span class="panel-title">活动列表</span></div>
+                    <div class="panel-body">
+                        <table>
+                            <thead><tr><th>ID</th><th>活动名称</th><th>类型</th><th>开始时间</th><th>结束时间</th><th>参与数</th><th>状态</th><th>操作</th></tr></thead>
+                            <tbody>
+                                <tr><td>E001</td><td>财神诞·百万红包</td><td><span class="badge badge-warning">限时</span></td><td>03-25</td><td>03-31</td><td>5,000</td><td><span class="badge badge-success">进行中</span></td><td><button class="btn btn-sm btn-primary">管理</button> <button class="btn btn-sm btn-danger">终止</button></td></tr>
+                                <tr><td>E002</td><td>新手七日登录</td><td><span class="badge badge-info">常驻</span></td><td>常驻</td><td>常驻</td><td>8,200</td><td><span class="badge badge-success">进行中</span></td><td><button class="btn btn-sm btn-primary">管理</button></td></tr>
+                                <tr><td>E003</td><td>跨服争霸赛·S2</td><td><span class="badge badge-danger">竞技</span></td><td>03-28</td><td>04-03</td><td>2,000</td><td><span class="badge badge-success">进行中</span></td><td><button class="btn btn-sm btn-primary">管理</button> <button class="btn btn-sm btn-danger">终止</button></td></tr>
+                                <tr><td>E004</td><td>清明祭祖</td><td><span class="badge badge-warning">限时</span></td><td>04-04</td><td>04-06</td><td>-</td><td><span class="badge badge-info">未开始</span></td><td><button class="btn btn-sm btn-primary">编辑</button> <button class="btn btn-sm btn-danger">删除</button></td></tr>
+                                <tr><td>E005</td><td>春节红包大战</td><td><span class="badge badge-warning">限时</span></td><td>01-28</td><td>02-12</td><td>12,500</td><td><span class="badge badge-danger">已结束</span></td><td><button class="btn btn-sm btn-primary">数据</button></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="anticheat" class="page" style="display:none;">
+                <div class="header">
+                    <h2>🛡️ 反作弊</h2>
+                    <div>
+                        <button class="btn btn-primary" onclick="alert('全服扫描')">全服扫描</button>
+                        <button class="btn btn-success" onclick="alert('导出报告')">导出报告</button>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card"><h3>今日扫描</h3><div class="value">12,580</div><div class="change">全部用户</div></div>
+                    <div class="stat-card"><h3>可疑行为</h3><div class="value">2</div><div class="change down">待处理</div></div>
+                    <div class="stat-card"><h3>本月封禁</h3><div class="value">15</div><div class="change down">↓ 3 较上月</div></div>
+                    <div class="stat-card"><h3>误报率</h3><div class="value">0.8%</div><div class="change up">↓ 优化中</div></div>
+                </div>
+                <div class="search-box">
+                    <input type="text" placeholder="搜索用户ID/检测ID">
+                    <select><option value="">全部类型</option><option>速度异常</option><option>金币异常</option><option>数据篡改</option><option>自动化脚本</option><option>多开检测</option></select>
+                    <select><option value="">全部状态</option><option>待审核</option><option>已确认</option><option>已封禁</option><option>误报</option></select>
+                    <button class="btn btn-primary">搜索</button>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><span class="panel-title">异常检测记录</span></div>
+                    <div class="panel-body">
+                        <table>
+                            <thead><tr><th>检测ID</th><th>用户</th><th>Lv</th><th>异常类型</th><th>严重度</th><th>详情</th><th>时间</th><th>状态</th><th>操作</th></tr></thead>
+                            <tbody>
+                                <tr><td>AC001</td><td>可疑玩家A</td><td>78</td><td>金币异常</td><td><span class="badge badge-danger">高</span></td><td>1小时内获得500万香火钱</td><td>14:20</td><td><span class="badge badge-warning">待审核</span></td><td><button class="btn btn-sm btn-primary">审查</button> <button class="btn btn-sm btn-danger">封禁</button> <button class="btn btn-sm btn-success">放行</button></td></tr>
+                                <tr><td>AC002</td><td>可疑玩家B</td><td>45</td><td>自动化脚本</td><td><span class="badge badge-warning">中</span></td><td>化缘操作间隔固定0.5秒</td><td>15:10</td><td><span class="badge badge-warning">待审核</span></td><td><button class="btn btn-sm btn-primary">审查</button> <button class="btn btn-sm btn-danger">封禁</button> <button class="btn btn-sm btn-success">放行</button></td></tr>
+                                <tr><td>AC003</td><td>无辜路人C</td><td>32</td><td>速度异常</td><td><span class="badge badge-info">低</span></td><td>网络波动导致数据延迟</td><td>12:30</td><td><span class="badge badge-success">误报</span></td><td><button class="btn btn-sm btn-primary">详情</button></td></tr>
+                                <tr><td>AC004</td><td>外挂玩家D</td><td>99</td><td>数据篡改</td><td><span class="badge badge-danger">高</span></td><td>修改客户端内存数据</td><td>昨日</td><td><span class="badge badge-danger">已封禁</span></td><td><button class="btn btn-sm btn-primary">详情</button> <button class="btn btn-sm btn-success">解封</button></td></tr>
+                            </tbody>
+                        </table>
+                        <div class="pagination"><button>上一页</button><button class="active">1</button><button>2</button><button>下一页</button></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 机器人管理 -->
+            <div id="robots" class="page" style="display:none;">
+                <div class="header">
+                    <h2>🤖 机器人管理</h2>
+                    <div>
+                        <button class="btn btn-primary" onclick="batchCreateRobots()">批量创建</button>
+                        <button class="btn btn-success" onclick="alert('AI调度')">运行AI调度</button>
+                        <button class="btn btn-warning" onclick="alert('批量停用：机器人将变为离线状态，不会从玩家好友列表中消失')">批量停用</button>
+                    </div>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>总机器人</h3>
+                        <div class="value">500</div>
+                        <div class="change up">↑ 50 今日新增</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>活跃机器人</h3>
+                        <div class="value">450</div>
+                        <div class="change up">90% 活跃率</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>当前在线</h3>
+                        <div class="value">120</div>
+                        <div class="change">24% 在线率</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>今日行动</h3>
+                        <div class="value">12,500</div>
+                        <div class="change up">↑ 1,200 较昨日</div>
+                    </div>
+                </div>
+                
+                <div class="search-box">
+                    <input type="text" placeholder="搜索机器人ID/名称">
+                    <select>
+                        <option value="">全部状态</option>
+                        <option value="active">活跃</option>
+                        <option value="inactive">停用</option>
+                    </select>
+                    <select>
+                        <option value="">全部行为</option>
+                        <option value="casual">休闲型</option>
+                        <option value="active">活跃型</option>
+                        <option value="hardcore">肝帝型</option>
+                        <option value="trader">商人型</option>
+                        <option value="pvp">竞技型</option>
+                    </select>
+                    <button class="btn btn-primary">搜索</button>
+                </div>
+                
+                <div class="panel">
+                    <div class="panel-body">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>名称</th>
+                                    <th>等级</th>
+                                    <th>行为模式</th>
+                                    <th>状态</th>
+                                    <th>在线</th>
+                                    <th>今日行动</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="robots-tbody">
+                                <tr><td>1</td><td>赵聚财</td><td>45</td><td><span class="badge badge-info" onclick="changeRobotMode(this)" style="cursor:pointer">活跃型</span></td><td><span class="badge badge-success">活跃</span></td><td><span class="badge badge-success">在线</span></td><td>42</td><td><button class="btn btn-sm btn-primary">详情</button> <button class="btn btn-sm" onclick="renameRobot(this)" style="background:#2a3a4a;color:#f5a623">✏️改名</button> <button class="btn btn-sm btn-warning" onclick="toggleRobot(this)">停用</button></td></tr>
+                                <tr><td>2</td><td>钱鸿运</td><td>78</td><td><span class="badge badge-warning" onclick="changeRobotMode(this)" style="cursor:pointer">肝帝型</span></td><td><span class="badge badge-success">活跃</span></td><td><span class="badge badge-danger">离线</span></td><td>0</td><td><button class="btn btn-sm btn-primary">详情</button> <button class="btn btn-sm" onclick="renameRobot(this)" style="background:#2a3a4a;color:#f5a623">✏️改名</button> <button class="btn btn-sm btn-warning" onclick="toggleRobot(this)">停用</button></td></tr>
+                                <tr><td>3</td><td>孙瑞光</td><td>32</td><td><span class="badge badge-success" onclick="changeRobotMode(this)" style="cursor:pointer">休闲型</span></td><td><span class="badge badge-success">活跃</span></td><td><span class="badge badge-success">在线</span></td><td>18</td><td><button class="btn btn-sm btn-primary">详情</button> <button class="btn btn-sm" onclick="renameRobot(this)" style="background:#2a3a4a;color:#f5a623">✏️改名</button> <button class="btn btn-sm btn-warning" onclick="toggleRobot(this)">停用</button></td></tr>
+                                <tr><td>4</td><td>金满堂</td><td>66</td><td><span class="badge badge-danger" onclick="changeRobotMode(this)" style="cursor:pointer">竞技型</span></td><td><span class="badge badge-success">活跃</span></td><td><span class="badge badge-success">在线</span></td><td>55</td><td><button class="btn btn-sm btn-primary">详情</button> <button class="btn btn-sm" onclick="renameRobot(this)" style="background:#2a3a4a;color:#f5a623">✏️改名</button> <button class="btn btn-sm btn-warning" onclick="toggleRobot(this)">停用</button></td></tr>
+                                <tr><td>5</td><td>林祥云</td><td>51</td><td><span class="badge badge-primary" onclick="changeRobotMode(this)" style="cursor:pointer">商人型</span></td><td><span class="badge badge-success">活跃</span></td><td><span class="badge badge-danger">离线</span></td><td>28</td><td><button class="btn btn-sm btn-primary">详情</button> <button class="btn btn-sm" onclick="renameRobot(this)" style="background:#2a3a4a;color:#f5a623">✏️改名</button> <button class="btn btn-sm btn-warning" onclick="toggleRobot(this)">停用</button></td></tr>
+                            </tbody>
+                        </table>
+                        <div class="pagination">
+                            <button>上一页</button>
+                            <button class="active">1</button>
+                            <button>2</button>
+                            <button>3</button>
+                            <button>下一页</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 充值管理 -->
+            <div id="recharge" class="page" style="display:none;">
+                <div class="header">
+                    <h2>💎 充值管理</h2>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>今日充值</h3>
+                        <div class="value">¥25,800</div>
+                        <div class="change up">↑ 12% 较昨日</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>累计充值</h3>
+                        <div class="value">¥1,250,000</div>
+                        <div class="change up">总流水</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>今日订单</h3>
+                        <div class="value">156</div>
+                        <div class="change">98% 成功率</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>VIP用户</h3>
+                        <div class="value">320</div>
+                        <div class="change">占总数 25%</div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">充值订单</span>
+                        <div>
+                            <select>
+                                <option value="">全部状态</option>
+                                <option value="pending">待支付</option>
+                                <option value="paid">已支付</option>
+                                <option value="refunded">已退款</option>
+                            </select>
+                            <button class="btn btn-primary">导出</button>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>订单号</th>
+                                    <th>用户ID</th>
+                                    <th>档位</th>
+                                    <th>金额</th>
+                                    <th>元宝</th>
+                                    <th>状态</th>
+                                    <th>时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>ORD123456</td>
+                                    <td>1001</td>
+                                    <td>648元</td>
+                                    <td>¥648</td>
+                                    <td>8424</td>
+                                    <td><span class="badge badge-success">已支付</span></td>
+                                    <td>2026-03-27 10:30</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary">详情</button>
+                                        <button class="btn btn-sm btn-danger">退款</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">VIP配置</span>
+                        <button class="btn btn-primary">修改配置</button>
+                    </div>
+                    <div class="panel-body">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>VIP等级</th>
+                                    <th>名称</th>
+                                    <th>累计充值</th>
+                                    <th>特权</th>
+                                    <th>用户数</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>VIP1</td>
+                                    <td>青铜VIP</td>
+                                    <td>¥6</td>
+                                    <td>每日礼包、经验加成5%</td>
+                                    <td>150</td>
+                                </tr>
+                                <tr>
+                                    <td>VIP5</td>
+                                    <td>钻石VIP</td>
+                                    <td>¥1000</td>
+                                    <td>专属称号、交易免税、专属客服</td>
+                                    <td>25</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 订单管理（第一阶段合并） -->
+            <div id="orders" class="page" style="display:none;">
+                <div class="header">
+                    <h2>📦 订单管理</h2>
+                    <div><button class="btn btn-primary" onclick="alert('导出订单')">导出订单</button></div>
+                </div>
+                <div class="search-box">
+                    <input type="text" placeholder="搜索订单号/用户ID">
+                    <select><option value="">全部状态</option><option>待支付</option><option>已支付</option><option>已退款</option><option>已取消</option></select>
+                    <input type="date" style="width:auto;padding:8px 12px;border:1px solid #0f3460;background:#1a1a2e;color:#eee;border-radius:4px">
+                    <button class="btn btn-primary">搜索</button>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><span class="panel-title">订单列表</span></div>
+                    <div class="panel-body">
+                        <table>
+                            <thead><tr><th>订单号</th><th>用户ID</th><th>用户昵称</th><th>商品</th><th>金额</th><th>支付渠道</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
+                            <tbody>
+                                <tr><td>ORD20260328001</td><td>1001</td><td>财神小玩家</td><td>648元礼包</td><td>¥648</td><td>支付宝</td><td><span class="badge badge-success">已支付</span></td><td>2026-03-28 10:00</td><td><button class="btn btn-sm btn-primary">详情</button></td></tr>
+                                <tr><td>ORD20260328002</td><td>1002</td><td>修仙大佬</td><td>月卡</td><td>¥30</td><td>微信</td><td><span class="badge badge-success">已支付</span></td><td>2026-03-28 10:30</td><td><button class="btn btn-sm btn-primary">详情</button></td></tr>
+                                <tr><td>ORD20260328003</td><td>1003</td><td>旺财</td><td>98元礼包</td><td>¥98</td><td>-</td><td><span class="badge badge-warning">待支付</span></td><td>2026-03-28 11:00</td><td><button class="btn btn-sm btn-primary">详情</button> <button class="btn btn-sm btn-danger">取消</button></td></tr>
+                            </tbody>
+                        </table>
+                        <div class="pagination"><button>上一页</button><button class="active">1</button><button>2</button><button>3</button><button>下一页</button></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 公告管理（第一阶段合并） -->
+            <div id="announcements" class="page" style="display:none;">
+                <div class="header">
+                    <h2>📢 公告管理</h2>
+                    <div><button class="btn btn-primary" onclick="showAnnounceModal()">+ 发布公告</button></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><span class="panel-title">历史公告</span></div>
+                    <div class="panel-body">
+                        <table>
+                            <thead><tr><th>ID</th><th>标题</th><th>类型</th><th>发布人</th><th>发布时间</th><th>状态</th><th>操作</th></tr></thead>
+                            <tbody>
+                                <tr><td>ANN001</td><td>【维护】3月28日服务器维护公告</td><td><span class="badge badge-warning">维护</span></td><td>admin</td><td>2026-03-28 08:00</td><td><span class="badge badge-success">已发布</span></td><td><button class="btn btn-sm btn-primary">编辑</button> <button class="btn btn-sm btn-danger">下架</button></td></tr>
+                                <tr><td>ANN002</td><td>【活动】财神诞庆典活动开启！</td><td><span class="badge badge-info">活动</span></td><td>admin</td><td>2026-03-25 10:00</td><td><span class="badge badge-success">已发布</span></td><td><button class="btn btn-sm btn-primary">编辑</button> <button class="btn btn-sm btn-danger">下架</button></td></tr>
+                                <tr><td>ANN003</td><td>【更新】V19版本更新内容一览</td><td><span class="badge badge-success">更新</span></td><td>admin</td><td>2026-03-20 14:00</td><td><span class="badge badge-success">已发布</span></td><td><button class="btn btn-sm btn-primary">编辑</button> <button class="btn btn-sm btn-danger">下架</button></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- 发布公告弹窗 -->
+                <div id="announceModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);justify-content:center;align-items:center;z-index:1000">
+                    <div style="background:#16213e;padding:30px;border-radius:8px;width:600px;max-height:80vh;overflow-y:auto;border:1px solid #0f3460">
+                        <h3 style="margin-bottom:20px">📢 发布公告</h3>
+                        <div style="margin-bottom:15px">
+                            <label style="display:block;margin-bottom:5px;color:#888">公告标题</label>
+                            <input type="text" id="announceTitle" placeholder="请输入公告标题" style="width:100%;padding:8px 12px;border:1px solid #0f3460;background:#1a1a2e;color:#eee;border-radius:4px">
+                        </div>
+                        <div style="margin-bottom:15px">
+                            <label style="display:block;margin-bottom:5px;color:#888">公告类型</label>
+                            <select id="announceType" style="width:100%;padding:8px 12px;border:1px solid #0f3460;background:#1a1a2e;color:#eee;border-radius:4px">
+                                <option value="maintenance">维护公告</option>
+                                <option value="activity">活动公告</option>
+                                <option value="update">更新公告</option>
+                                <option value="urgent">紧急通知</option>
+                            </select>
+                        </div>
+                        <div style="margin-bottom:15px">
+                            <label style="display:block;margin-bottom:5px;color:#888">公告内容</label>
+                            <textarea id="announceContent" rows="6" placeholder="请输入公告内容..." style="width:100%;padding:8px 12px;border:1px solid #0f3460;background:#1a1a2e;color:#eee;border-radius:4px;resize:vertical"></textarea>
+                        </div>
+                        <div style="text-align:right">
+                            <button class="btn" onclick="closeAnnounceModal()" style="background:#34495e;margin-right:10px">取消</button>
+                            <button class="btn btn-primary" onclick="publishAnnouncement()">发布</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="logs" class="page" style="display:none;">
+                <div class="header">
+                    <h2>📝 系统日志</h2>
+                    <div>
+                        <button class="btn btn-primary" onclick="alert('导出日志')">导出日志</button>
+                        <button class="btn btn-danger" onclick="alert('清空日志')">清空日志</button>
+                    </div>
+                </div>
+                <div class="search-box">
+                    <input type="text" placeholder="搜索日志内容">
+                    <select><option value="">全部级别</option><option>INFO</option><option>WARN</option><option>ERROR</option><option>FATAL</option></select>
+                    <select><option value="">全部模块</option><option>用户系统</option><option>交易系统</option><option>PVP系统</option><option>充值系统</option><option>反作弊</option><option>活动系统</option></select>
+                    <input type="date" style="width:auto">
+                    <button class="btn btn-primary">搜索</button>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><span class="panel-title">实时日志（最近100条）</span><span class="badge badge-success">实时监控中</span></div>
+                    <div class="panel-body" style="max-height:500px;overflow-y:auto;font-family:monospace;font-size:13px;line-height:1.8;">
+                        <div style="color:#4ade80">[2026-03-28 19:28:01] [INFO] [用户系统] 用户 玄机子(1001) 登录成功，IP: 192.168.1.100</div>
+                        <div style="color:#4ade80">[2026-03-28 19:27:55] [INFO] [交易系统] 摊位交易完成 T10001: 天机剑 50,000金</div>
+                        <div style="color:#fbbf24">[2026-03-28 19:27:30] [WARN] [PVP系统] 匹配超时: 玩家 小白(1005) 等待超过60秒</div>
+                        <div style="color:#4ade80">[2026-03-28 19:27:15] [INFO] [活动系统] 财神诞活动: 新增参与者 旺财(1003)</div>
+                        <div style="color:#f87171">[2026-03-28 19:26:50] [ERROR] [充值系统] 支付回调异常: 订单 ORD123460 状态不一致</div>
+                        <div style="color:#4ade80">[2026-03-28 19:26:30] [INFO] [反作弊] 全服扫描完成: 12,580用户, 2个可疑</div>
+                        <div style="color:#fbbf24">[2026-03-28 19:26:00] [WARN] [用户系统] 用户 可疑玩家A(2001) 短时间内大量操作</div>
+                        <div style="color:#4ade80">[2026-03-28 19:25:45] [INFO] [门派系统] 门派战开始: 天机阁 vs 万宝楼</div>
+                        <div style="color:#4ade80">[2026-03-28 19:25:30] [INFO] [师徒系统] 阿福(1004) 出师成功，师傅 招财猫(1003)</div>
+                        <div style="color:#f87171">[2026-03-28 19:25:00] [ERROR] [数据库] 连接池使用率达到85%，请关注</div>
+                        <div style="color:#4ade80">[2026-03-28 19:24:30] [INFO] [用户系统] 新用户注册: 新手小陈(5001)</div>
+                        <div style="color:#fbbf24">[2026-03-28 19:24:00] [WARN] [交易系统] 拍卖物品 金蝉脱壳符 收到争议举报</div>
+                        <div style="color:#4ade80">[2026-03-28 19:23:30] [INFO] [充值系统] 订单 ORD123456 支付成功: ¥648</div>
+                        <div style="color:#ff6b6b">[2026-03-28 19:23:00] [FATAL] [服务器] 内存使用率达到90%！已触发GC</div>
+                        <div style="color:#4ade80">[2026-03-28 19:22:30] [INFO] [PVP系统] 排名赛 PVP5001 结束: 玄机子 胜</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="settings" class="page" style="display:none;">
+                <div class="header">
+                    <h2>⚙️ 系统设置</h2>
+                    <div><button class="btn btn-primary" onclick="alert('保存所有设置')">保存设置</button></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><span class="panel-title">🎮 游戏参数</span></div>
+                    <div class="panel-body">
+                        <table>
+                            <thead><tr><th>参数名</th><th>当前值</th><th>说明</th><th>操作</th></tr></thead>
+                            <tbody>
+                                <tr><td>经验倍率</td><td><input type="number" value="1.0" step="0.1" style="width:80px;padding:4px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px"></td><td>全服经验获取倍率</td><td><button class="btn btn-sm btn-primary">修改</button></td></tr>
+                                <tr><td>金币掉率</td><td><input type="number" value="1.0" step="0.1" style="width:80px;padding:4px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px"></td><td>全服金币掉落倍率</td><td><button class="btn btn-sm btn-primary">修改</button></td></tr>
+                                <tr><td>化缘次数/日</td><td><input type="number" value="20" style="width:80px;padding:4px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px"></td><td>每日化缘上限</td><td><button class="btn btn-sm btn-primary">修改</button></td></tr>
+                                <tr><td>PVP匹配范围</td><td><input type="number" value="10" style="width:80px;padding:4px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px"> 级</td><td>匹配等级差范围</td><td><button class="btn btn-sm btn-primary">修改</button></td></tr>
+                                <tr><td>交易税率</td><td><input type="number" value="5" step="1" style="width:80px;padding:4px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px"> %</td><td>摊位/拍卖交易税</td><td><button class="btn btn-sm btn-primary">修改</button></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><span class="panel-title">🖥️ 服务器状态</span></div>
+                    <div class="panel-body">
+                        <table>
+                            <thead><tr><th>服务器</th><th>状态</th><th>CPU</th><th>内存</th><th>在线数</th><th>操作</th></tr></thead>
+                            <tbody>
+                                <tr><td>游戏服 #1</td><td><span class="badge badge-success">运行中</span></td><td>35%</td><td>62%</td><td>450</td><td><button class="btn btn-sm btn-danger">重启</button></td></tr>
+                                <tr><td>游戏服 #2</td><td><span class="badge badge-success">运行中</span></td><td>28%</td><td>55%</td><td>406</td><td><button class="btn btn-sm btn-danger">重启</button></td></tr>
+                                <tr><td>数据库主库</td><td><span class="badge badge-success">运行中</span></td><td>45%</td><td>78%</td><td>-</td><td><button class="btn btn-sm btn-danger">重启</button></td></tr>
+                                <tr><td>数据库从库</td><td><span class="badge badge-success">运行中</span></td><td>20%</td><td>45%</td><td>-</td><td><button class="btn btn-sm btn-danger">重启</button></td></tr>
+                                <tr><td>缓存服务</td><td><span class="badge badge-warning">高负载</span></td><td>72%</td><td>85%</td><td>-</td><td><button class="btn btn-sm btn-danger">重启</button></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><span class="panel-title">📢 维护公告</span><button class="btn btn-sm btn-primary" onclick="alert('发布公告')">发布公告</button></div>
+                    <div class="panel-body">
+                        <div style="margin-bottom:10px"><label style="color:#888;margin-right:10px">标题</label><input type="text" placeholder="输入公告标题" style="width:60%;padding:8px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px"></div>
+                        <div style="margin-bottom:10px"><label style="color:#888;margin-right:10px">内容</label><textarea placeholder="输入公告内容..." style="width:60%;height:100px;padding:8px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px;resize:vertical"></textarea></div>
+                        <div><label style="color:#888;margin-right:10px">类型</label><select style="padding:8px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px"><option>维护公告</option><option>更新公告</option><option>活动公告</option><option>紧急通知</option></select></div>
+                    </div>
+                </div>
+            </div>
+        
+
+            <!-- 📊 埋点管理页面 -->
+            <div id="analytics" class="page" style="display:none">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <h2 style="margin:0">📊 埋点管理</h2>
+                    <div>
+                        <input type="text" id="analytics-search" placeholder="搜索..." 
+                               style="padding:8px 12px;border:1px solid #555;background:#2a2a2a;color:#fff;border-radius:4px;margin-right:8px"
+                               onkeyup="searchAnalytics()">
+                        <button onclick="addAnalytics()" 
+                                style="padding:8px 16px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold">
+                            + 新增
+                        </button>
+                    </div>
+                </div>
+                <div style="background:#2a2a2a;border-radius:8px;overflow:hidden">
+                    <table style="width:100%;border-collapse:collapse">
+                        <thead>
+                            <tr style="background:#333">
+                                <th style="padding:12px;text-align:left;color:#f5a623">ID</th>
+                                <th>事件名称</th><th>触发次数</th><th>日均次数</th><th>最近触发</th><th>状态</th>
+                                <th style="padding:12px;text-align:left;color:#f5a623">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="analytics-table-body">
+                            <tr><td colspan="7" style="padding:20px;text-align:center;color:#888">
+                                加载中... (连接API: /api/admin/analytics)
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+                    <span style="color:#888" id="analytics-count">共 0 条</span>
+                    <div>
+                        <button onclick="prevAnalyticsPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">上一页</button>
+                        <span style="margin:0 12px;color:#ccc" id="analytics-page-info">1 / 1</span>
+                        <button onclick="nextAnalyticsPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">下一页</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🏪 商品管理页面 -->
+            <div id="products" class="page" style="display:none">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <h2 style="margin:0">🏪 商品管理</h2>
+                    <div>
+                        <input type="text" id="products-search" placeholder="搜索..." 
+                               style="padding:8px 12px;border:1px solid #555;background:#2a2a2a;color:#fff;border-radius:4px;margin-right:8px"
+                               onkeyup="searchProducts()">
+                        <button onclick="addProducts()" 
+                                style="padding:8px 16px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold">
+                            + 新增
+                        </button>
+                    </div>
+                </div>
+                <div style="background:#2a2a2a;border-radius:8px;overflow:hidden">
+                    <table style="width:100%;border-collapse:collapse">
+                        <thead>
+                            <tr style="background:#333">
+                                <th style="padding:12px;text-align:left;color:#f5a623">ID</th>
+                                <th>商品名</th><th>类型</th><th>价格(金币)</th><th>出售价</th><th>等级要求</th><th>状态</th>
+                                <th style="padding:12px;text-align:left;color:#f5a623">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-table-body">
+                            <tr><td colspan="8" style="padding:20px;text-align:center;color:#888">
+                                加载中... (连接API: /api/admin/products)
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+                    <span style="color:#888" id="products-count">共 0 条</span>
+                    <div>
+                        <button onclick="prevProductsPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">上一页</button>
+                        <span style="margin:0 12px;color:#ccc" id="products-page-info">1 / 1</span>
+                        <button onclick="nextProductsPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">下一页</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🎒 道具管理页面 -->
+            <div id="items" class="page" style="display:none">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <h2 style="margin:0">🎒 道具管理</h2>
+                    <div>
+                        <input type="text" id="items-search" placeholder="搜索..." 
+                               style="padding:8px 12px;border:1px solid #555;background:#2a2a2a;color:#fff;border-radius:4px;margin-right:8px"
+                               onkeyup="searchItems()">
+                        <button onclick="addItems()" 
+                                style="padding:8px 16px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold">
+                            + 新增
+                        </button>
+                    </div>
+                </div>
+                <div style="background:#2a2a2a;border-radius:8px;overflow:hidden">
+                    <table style="width:100%;border-collapse:collapse">
+                        <thead>
+                            <tr style="background:#333">
+                                <th style="padding:12px;text-align:left;color:#f5a623">ID</th>
+                                <th>道具名</th><th>类型</th><th>品质</th><th>可叠加</th><th>可交易</th><th>使用效果</th>
+                                <th style="padding:12px;text-align:left;color:#f5a623">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="items-table-body">
+                            <tr><td colspan="8" style="padding:20px;text-align:center;color:#888">
+                                加载中... (连接API: /api/admin/items)
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+                    <span style="color:#888" id="items-count">共 0 条</span>
+                    <div>
+                        <button onclick="prevItemsPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">上一页</button>
+                        <span style="margin:0 12px;color:#ccc" id="items-page-info">1 / 1</span>
+                        <button onclick="nextItemsPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">下一页</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🏮 财神管理页面 -->
+            <div id="deities" class="page" style="display:none">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <h2 style="margin:0">🏮 财神管理</h2>
+                    <div>
+                        <input type="text" id="deities-search" placeholder="搜索..." 
+                               style="padding:8px 12px;border:1px solid #555;background:#2a2a2a;color:#fff;border-radius:4px;margin-right:8px"
+                               onkeyup="searchDeities()">
+                        <button onclick="addDeities()" 
+                                style="padding:8px 16px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold">
+                            + 新增
+                        </button>
+                    </div>
+                </div>
+                <div style="background:#2a2a2a;border-radius:8px;overflow:hidden">
+                    <table style="width:100%;border-collapse:collapse">
+                        <thead>
+                            <tr style="background:#333">
+                                <th style="padding:12px;text-align:left;color:#f5a623">ID</th>
+                                <th>财神名</th><th>境界</th><th>属性</th><th>技能</th><th>故事</th><th>解锁条件</th>
+                                <th style="padding:12px;text-align:left;color:#f5a623">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deities-table-body">
+                            <tr><td colspan="8" style="padding:20px;text-align:center;color:#888">
+                                加载中... (连接API: /api/admin/deities)
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+                    <span style="color:#888" id="deities-count">共 0 条</span>
+                    <div>
+                        <button onclick="prevDeitiesPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">上一页</button>
+                        <span style="margin:0 12px;color:#ccc" id="deities-page-info">1 / 1</span>
+                        <button onclick="nextDeitiesPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">下一页</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 📖 故事管理页面 -->
+            <div id="stories" class="page" style="display:none">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <h2 style="margin:0">📖 故事管理</h2>
+                    <div>
+                        <input type="text" id="stories-search" placeholder="搜索..." 
+                               style="padding:8px 12px;border:1px solid #555;background:#2a2a2a;color:#fff;border-radius:4px;margin-right:8px"
+                               onkeyup="searchStories()">
+                        <button onclick="addStories()" 
+                                style="padding:8px 16px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold">
+                            + 新增
+                        </button>
+                    </div>
+                </div>
+                <div style="background:#2a2a2a;border-radius:8px;overflow:hidden">
+                    <table style="width:100%;border-collapse:collapse">
+                        <thead>
+                            <tr style="background:#333">
+                                <th style="padding:12px;text-align:left;color:#f5a623">ID</th>
+                                <th>区域</th><th>故事简介</th><th>结局数</th><th>风格</th><th>创建时间</th><th>状态</th>
+                                <th style="padding:12px;text-align:left;color:#f5a623">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stories-table-body">
+                            <tr><td colspan="8" style="padding:20px;text-align:center;color:#888">
+                                加载中... (连接API: /api/admin/stories)
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+                    <span style="color:#888" id="stories-count">共 0 条</span>
+                    <div>
+                        <button onclick="prevStoriesPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">上一页</button>
+                        <span style="margin:0 12px;color:#ccc" id="stories-page-info">1 / 1</span>
+                        <button onclick="nextStoriesPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">下一页</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🐾 生灵管理页面 -->
+            <div id="creatures" class="page" style="display:none">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <h2 style="margin:0">🐾 生灵管理</h2>
+                    <div>
+                        <input type="text" id="creatures-search" placeholder="搜索..." 
+                               style="padding:8px 12px;border:1px solid #555;background:#2a2a2a;color:#fff;border-radius:4px;margin-right:8px"
+                               onkeyup="searchCreatures()">
+                        <button onclick="addCreatures()" 
+                                style="padding:8px 16px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold">
+                            + 新增
+                        </button>
+                    </div>
+                </div>
+                <div style="background:#2a2a2a;border-radius:8px;overflow:hidden">
+                    <table style="width:100%;border-collapse:collapse">
+                        <thead>
+                            <tr style="background:#333">
+                                <th style="padding:12px;text-align:left;color:#f5a623">ID</th>
+                                <th>名称</th><th>类型</th><th>品质</th><th>基础攻击</th><th>基础防御</th><th>技能</th>
+                                <th style="padding:12px;text-align:left;color:#f5a623">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="creatures-table-body">
+                            <tr><td colspan="8" style="padding:20px;text-align:center;color:#888">
+                                加载中... (连接API: /api/admin/creatures)
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+                    <span style="color:#888" id="creatures-count">共 0 条</span>
+                    <div>
+                        <button onclick="prevCreaturesPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">上一页</button>
+                        <span style="margin:0 12px;color:#ccc" id="creatures-page-info">1 / 1</span>
+                        <button onclick="nextCreaturesPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">下一页</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ⚡ 技能管理页面 -->
+            <div id="skillmgr" class="page" style="display:none">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <h2 style="margin:0">⚡ 技能管理</h2>
+                    <div>
+                        <input type="text" id="skillmgr-search" placeholder="搜索..." 
+                               style="padding:8px 12px;border:1px solid #555;background:#2a2a2a;color:#fff;border-radius:4px;margin-right:8px"
+                               onkeyup="searchSkillmgr()">
+                        <button onclick="addSkillmgr()" 
+                                style="padding:8px 16px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold">
+                            + 新增
+                        </button>
+                    </div>
+                </div>
+                <div style="background:#2a2a2a;border-radius:8px;overflow:hidden">
+                    <table style="width:100%;border-collapse:collapse">
+                        <thead>
+                            <tr style="background:#333">
+                                <th style="padding:12px;text-align:left;color:#f5a623">ID</th>
+                                <th>技能名</th><th>类型</th><th>元素</th><th>伤害</th><th>消耗</th><th>等级要求</th>
+                                <th style="padding:12px;text-align:left;color:#f5a623">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="skillmgr-table-body">
+                            <tr><td colspan="8" style="padding:20px;text-align:center;color:#888">
+                                加载中... (连接API: /api/admin/skillmgr)
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+                    <span style="color:#888" id="skillmgr-count">共 0 条</span>
+                    <div>
+                        <button onclick="prevSkillmgrPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">上一页</button>
+                        <span style="margin:0 12px;color:#ccc" id="skillmgr-page-info">1 / 1</span>
+                        <button onclick="nextSkillmgrPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">下一页</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🗡️ 装备管理页面 -->
+            <div id="equipmgr" class="page" style="display:none">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <h2 style="margin:0">🗡️ 装备管理</h2>
+                    <div>
+                        <input type="text" id="equipmgr-search" placeholder="搜索..." 
+                               style="padding:8px 12px;border:1px solid #555;background:#2a2a2a;color:#fff;border-radius:4px;margin-right:8px"
+                               onkeyup="searchEquipmgr()">
+                        <button onclick="addEquipmgr()" 
+                                style="padding:8px 16px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold">
+                            + 新增
+                        </button>
+                    </div>
+                </div>
+                <div style="background:#2a2a2a;border-radius:8px;overflow:hidden">
+                    <table style="width:100%;border-collapse:collapse">
+                        <thead>
+                            <tr style="background:#333">
+                                <th style="padding:12px;text-align:left;color:#f5a623">ID</th>
+                                <th>装备名</th><th>槽位</th><th>品质</th><th>属性加成</th><th>等级要求</th><th>掉落来源</th>
+                                <th style="padding:12px;text-align:left;color:#f5a623">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="equipmgr-table-body">
+                            <tr><td colspan="8" style="padding:20px;text-align:center;color:#888">
+                                加载中... (连接API: /api/admin/equipmgr)
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+                    <span style="color:#888" id="equipmgr-count">共 0 条</span>
+                    <div>
+                        <button onclick="prevEquipmgrPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">上一页</button>
+                        <span style="margin:0 12px;color:#ccc" id="equipmgr-page-info">1 / 1</span>
+                        <button onclick="nextEquipmgrPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">下一页</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🌍 财域管理页面 -->
+            <div id="domains" class="page" style="display:none">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <h2 style="margin:0">🌍 财域管理</h2>
+                    <div>
+                        <input type="text" id="domains-search" placeholder="搜索..." 
+                               style="padding:8px 12px;border:1px solid #555;background:#2a2a2a;color:#fff;border-radius:4px;margin-right:8px"
+                               onkeyup="searchDomains()">
+                        <button onclick="addDomains()" 
+                                style="padding:8px 16px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold">
+                            + 新增
+                        </button>
+                    </div>
+                </div>
+                <div style="background:#2a2a2a;border-radius:8px;overflow:hidden">
+                    <table style="width:100%;border-collapse:collapse">
+                        <thead>
+                            <tr style="background:#333">
+                                <th style="padding:12px;text-align:left;color:#f5a623">ID</th>
+                                <th>财域名</th><th>五行</th><th>地支</th><th>等级要求</th><th>怪物数</th><th>掉落表</th>
+                                <th style="padding:12px;text-align:left;color:#f5a623">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="domains-table-body">
+                            <tr><td colspan="8" style="padding:20px;text-align:center;color:#888">
+                                加载中... (连接API: /api/admin/domains)
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+                    <span style="color:#888" id="domains-count">共 0 条</span>
+                    <div>
+                        <button onclick="prevDomainsPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">上一页</button>
+                        <span style="margin:0 12px;color:#ccc" id="domains-page-info">1 / 1</span>
+                        <button onclick="nextDomainsPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">下一页</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🏆 任务成就页面 -->
+            <div id="quests" class="page" style="display:none">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <h2 style="margin:0">🏆 任务成就</h2>
+                    <div>
+                        <input type="text" id="quests-search" placeholder="搜索..." 
+                               style="padding:8px 12px;border:1px solid #555;background:#2a2a2a;color:#fff;border-radius:4px;margin-right:8px"
+                               onkeyup="searchQuests()">
+                        <button onclick="addQuests()" 
+                                style="padding:8px 16px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold">
+                            + 新增
+                        </button>
+                    </div>
+                </div>
+                <div style="background:#2a2a2a;border-radius:8px;overflow:hidden">
+                    <table style="width:100%;border-collapse:collapse">
+                        <thead>
+                            <tr style="background:#333">
+                                <th style="padding:12px;text-align:left;color:#f5a623">ID</th>
+                                <th>名称</th><th>类型</th><th>描述</th><th>奖励</th><th>完成条件</th><th>完成人数</th>
+                                <th style="padding:12px;text-align:left;color:#f5a623">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quests-table-body">
+                            <tr><td colspan="8" style="padding:20px;text-align:center;color:#888">
+                                加载中... (连接API: /api/admin/quests)
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+                    <span style="color:#888" id="quests-count">共 0 条</span>
+                    <div>
+                        <button onclick="prevQuestsPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">上一页</button>
+                        <span style="margin:0 12px;color:#ccc" id="quests-page-info">1 / 1</span>
+                        <button onclick="nextQuestsPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">下一页</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🎨 装修管理页面 -->
+            <div id="decoration" class="page" style="display:none">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <h2 style="margin:0">🎨 装修管理</h2>
+                    <div>
+                        <input type="text" id="decoration-search" placeholder="搜索..." 
+                               style="padding:8px 12px;border:1px solid #555;background:#2a2a2a;color:#fff;border-radius:4px;margin-right:8px"
+                               onkeyup="searchDecoration()">
+                        <button onclick="addDecoration()" 
+                                style="padding:8px 16px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold">
+                            + 新增
+                        </button>
+                    </div>
+                </div>
+                <div style="background:#2a2a2a;border-radius:8px;overflow:hidden">
+                    <table style="width:100%;border-collapse:collapse">
+                        <thead>
+                            <tr style="background:#333">
+                                <th style="padding:12px;text-align:left;color:#f5a623">ID</th>
+                                <th>装修名</th><th>类型</th><th>品质</th><th>价格</th><th>效果</th><th>上架状态</th>
+                                <th style="padding:12px;text-align:left;color:#f5a623">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="decoration-table-body">
+                            <tr><td colspan="8" style="padding:20px;text-align:center;color:#888">
+                                加载中... (连接API: /api/admin/decoration)
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+                    <span style="color:#888" id="decoration-count">共 0 条</span>
+                    <div>
+                        <button onclick="prevDecorationPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">上一页</button>
+                        <span style="margin:0 12px;color:#ccc" id="decoration-page-info">1 / 1</span>
+                        <button onclick="nextDecorationPage()" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer">下一页</button>
+                    </div>
+                </div>
+            </div>
+
+            </main>
+    </div>
+    <!-- ===== 通用模态框 ===== -->
+    <div id="globalModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);z-index:2000;justify-content:center;align-items:center">
+        <div style="background:#16213e;border:1px solid #0f3460;border-radius:10px;width:650px;max-width:90vw;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+            <div id="modalHeader" style="display:flex;justify-content:space-between;align-items:center;padding:20px 24px 16px;border-bottom:1px solid #0f3460">
+                <h3 id="modalTitle" style="margin:0;font-size:18px"></h3>
+                <span onclick="closeGlobalModal()" style="cursor:pointer;font-size:24px;color:#888;line-height:1">&times;</span>
+            </div>
+            <div id="modalBody" style="padding:20px 24px"></div>
+            <div id="modalFooter" style="padding:12px 24px 20px;text-align:right;border-top:1px solid #0f3460"></div>
+        </div>
+    </div>
+    <!-- ===== Toast提示 ===== -->
+    <div id="globalToast" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);padding:12px 28px;border-radius:8px;font-size:14px;z-index:3000;transition:opacity 0.3s"></div>
+
+
+    <script>
+        // ===== 页面切换 =====
+        function showPage(pageName) {
+            document.querySelectorAll('.page').forEach(function(p){ p.style.display='none'; });
+            document.getElementById(pageName).style.display = 'block';
+            document.querySelectorAll('.nav-menu li').forEach(function(li){ li.classList.remove('active'); });
+            if(event && event.target) event.target.closest('li').classList.add('active');
+        }
+
+        // ===== Toast提示 =====
+        function showToast(msg, type) {
+            var t = document.getElementById('globalToast');
+            t.textContent = msg;
+            t.style.background = type === 'error' ? '#e74c3c' : type === 'warn' ? '#f39c12' : '#27ae60';
+            t.style.color = '#fff';
+            t.style.display = 'block';
+            t.style.opacity = '1';
+            setTimeout(function(){ t.style.opacity='0'; setTimeout(function(){ t.style.display='none'; },300); }, 2000);
+        }
+
+        // ===== 通用模态框 =====
+        function showGlobalModal(title, bodyHTML, footerHTML) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').innerHTML = bodyHTML;
+            document.getElementById('modalFooter').innerHTML = footerHTML || '<button class="btn" onclick="closeGlobalModal()" style="background:#34495e">关闭</button>';
+            document.getElementById('globalModal').style.display = 'flex';
+        }
+        function closeGlobalModal() {
+            document.getElementById('globalModal').style.display = 'none';
+        }
+        // 点击遮罩关闭
+        document.getElementById('globalModal').addEventListener('click', function(e) {
+            if (e.target === this) closeGlobalModal();
+        });
+
+        // ===== 确认弹窗 =====
+        function showConfirm(title, msg, onYes) {
+            var body = '<div style="text-align:center;padding:10px 0"><p style="font-size:16px;margin-bottom:5px">' + msg + '</p></div>';
+            var footer = '<button class="btn" onclick="closeGlobalModal()" style="background:#34495e;margin-right:10px">取消</button>' +
+                '<button class="btn btn-danger" onclick="closeGlobalModal();(' + onYes.toString() + ')()">确认</button>';
+            showGlobalModal(title, body, footer);
+        }
+
+        // ===== 详情弹窗 =====
+        function showDetailModal(title, fields) {
+            var body = '<table style="width:100%;border-collapse:collapse">';
+            fields.forEach(function(f) {
+                body += '<tr><td style="padding:10px 12px;color:#888;white-space:nowrap;border-bottom:1px solid #0f3460;width:120px">' + f[0] + '</td>';
+                body += '<td style="padding:10px 12px;border-bottom:1px solid #0f3460">' + f[1] + '</td></tr>';
+            });
+            body += '</table>';
+            showGlobalModal(title, body);
+        }
+
+        // ===== 从表格行提取数据 =====
+        function getRowData(btn) {
+            var tr = btn.closest('tr');
+            if (!tr) return [];
+            return Array.prototype.map.call(tr.querySelectorAll('td'), function(td){ return td.textContent.trim(); });
+        }
+        function getPageId(btn) {
+            var page = btn.closest('.page');
+            return page ? page.id : '';
+        }
+
+        // ===== 公告管理（保留原有） =====
+        function showAnnounceModal() {
+            document.getElementById('announceModal').style.display = 'flex';
+        }
+        function closeAnnounceModal() {
+            document.getElementById('announceModal').style.display = 'none';
+        }
+        function publishAnnouncement() {
+            var title = document.getElementById('announceTitle').value;
+            if (title) {
+                var type = document.getElementById('announceType');
+                var typeText = type.options[type.selectedIndex].text;
+                showToast('✅ 公告已发布: 【' + typeText + '】' + title, 'success');
+                closeAnnounceModal();
+                document.getElementById('announceTitle').value = '';
+                document.getElementById('announceContent').value = '';
+            } else {
+                showToast('⚠️ 请输入公告标题', 'warn');
+            }
+        }
+
+        // ===== 事件委托：处理所有按钮点击 =====
+        document.addEventListener('click', function(e) {
+            var btn = e.target.closest('button');
+            if (!btn) return;
+            // 已有onclick的按钮跳过
+            if (btn.getAttribute('onclick')) return;
+            // 导航按钮跳过
+            if (btn.closest('.nav-menu')) return;
+
+            var text = btn.textContent.trim();
+            var page = getPageId(btn);
+            var row = getRowData(btn);
+
+            // ===== Dashboard页面 =====
+            if (page === 'dashboard') {
+                if (text === '退出') {
+                    showConfirm('退出确认', '确定要退出管理后台吗？', function(){ showToast('已退出登录','success'); });
+                    return;
+                }
+                // 系统状态表格的查看/管理按钮 → 跳转对应页面
+                var moduleMap = {'等级系统':'users','十二财域':'events','门派系统':'sects','师徒系统':'mentors',
+                    '交易市场':'trades','PVP系统':'pvp','活动系统':'events','反作弊系统':'anticheat'};
+                if (row.length > 0) {
+                    var targetPage = moduleMap[row[0]];
+                    if (targetPage) {
+                        // 模拟点击导航
+                        var navItems = document.querySelectorAll('.nav-menu li');
+                        navItems.forEach(function(li) {
+                            var onc = li.getAttribute('onclick');
+                            if (onc && onc.indexOf(targetPage) > -1) li.click();
+                        });
+                        return;
+                    }
+                }
+            }
+
+            // ===== Users页面 =====
+            if (page === 'users') {
+                if (text === '搜索') {
+                    var input = btn.closest('.search-box').querySelector('input');
+                    showToast('🔍 搜索: ' + (input.value || '全部用户'), 'success');
+                    return;
+                }
+                if (text === '详情' && row.length >= 7) {
+                    showDetailModal('👤 用户详情 - ' + row[1], [
+                        ['用户ID', row[0]], ['昵称', row[1]], ['等级', row[2]],
+                        ['境界', row[3]], ['香火钱', row[4]], ['元宝', row[5]],
+                        ['状态', row[6]], ['注册时间', '2026-01-15 08:30:00'],
+                        ['最后登录', '2026-03-28 19:28:01'], ['累计在线', '320小时'],
+                        ['累计充值', '¥1,280'], ['所属门派', '天机阁']
+                    ]);
+                    return;
+                }
+                if (text === '封禁' && row.length >= 2) {
+                    showConfirm('⚠️ 封禁用户', '确定要封禁用户 <strong>' + row[1] + '</strong>（ID:' + row[0] + '）吗？<br><br><span style="color:#e74c3c">封禁后该用户将无法登录游戏</span>', function(){
+                        showToast('🚫 已封禁用户: ' + row[1], 'error');
+                    });
+                    return;
+                }
+            }
+
+            // ===== Sects页面 =====
+            if (page === 'sects') {
+                if (text === '管理' && row.length >= 7) {
+                    showDetailModal('🏛️ 门派详情 - ' + row[1], [
+                        ['门派ID', row[0]], ['门派名', row[1]], ['掌门', row[2]],
+                        ['成员数', row[3]], ['门派等级', row[4]], ['资金', row[5]],
+                        ['状态', row[6]], ['创建时间', '2026-01-01'],
+                        ['本周活跃度', '85%'], ['门派技能', '聚财术Lv.5 / 金光阵Lv.3'],
+                        ['门派仓库', '装备32件 / 材料156个'], ['本月门派战', '胜3 / 负1']
+                    ]);
+                    return;
+                }
+                if (text === '解散' && row.length >= 2) {
+                    showConfirm('⚠️ 解散门派', '确定要解散 <strong>' + row[1] + '</strong> 吗？<br><br><span style="color:#e74c3c">此操作不可逆，所有成员将被踢出</span>', function(){
+                        showToast('💥 已解散门派: ' + row[1], 'error');
+                    });
+                    return;
+                }
+            }
+
+            // ===== Mentors页面 =====
+            if (page === 'mentors') {
+                if (text === '搜索') {
+                    var input = btn.closest('.search-box').querySelector('input');
+                    showToast('🔍 搜索: ' + (input.value || '全部师徒'), 'success');
+                    return;
+                }
+                if (text === '详情' && row.length >= 7) {
+                    showDetailModal('👨‍🏫 师徒详情', [
+                        ['师傅', row[0] + ' (Lv.' + row[1] + ')'],
+                        ['徒弟', row[2] + ' (Lv.' + row[3] + ')'],
+                        ['持续天数', row[4]], ['传功次数', row[5]],
+                        ['状态', row[6]], ['拜师时间', '2026-02-26 10:00'],
+                        ['师傅奖励', '经验+15% / 贡献点×' + row[5]],
+                        ['徒弟收益', '经验+20% / 技能书×3'],
+                        ['互动评价', '⭐⭐⭐⭐⭐']
+                    ]);
+                    return;
+                }
+                if (text === '强制解除' && row.length >= 3) {
+                    showConfirm('⚠️ 强制解除师徒', '确定要强制解除 <strong>' + row[0] + '</strong> 和 <strong>' + row[2] + '</strong> 的师徒关系吗？', function(){
+                        showToast('💔 已解除师徒关系: ' + row[0] + ' ↔ ' + row[2], 'warn');
+                    });
+                    return;
+                }
+            }
+
+            // ===== Trades页面 =====
+            if (page === 'trades') {
+                if (text === '搜索') {
+                    var input = btn.closest('.search-box').querySelector('input');
+                    showToast('🔍 搜索: ' + (input.value || '全部交易'), 'success');
+                    return;
+                }
+                if (text === '详情' && row.length >= 9) {
+                    showDetailModal('💰 交易详情 - ' + row[0], [
+                        ['交易ID', row[0]], ['卖家', row[1]], ['买家', row[2] || '-'],
+                        ['物品', row[3]], ['数量', row[4]], ['单价', row[5] + ' 香火钱'],
+                        ['类型', row[6]], ['状态', row[7]], ['时间', row[8]],
+                        ['交易税', Math.floor(parseInt(row[5].replace(/,/g,''))*0.05) + ' 香火钱'],
+                        ['手续费', '卖家承担']
+                    ]);
+                    return;
+                }
+                if (text === '终止' && row.length >= 1) {
+                    showConfirm('⚠️ 终止交易', '确定要终止交易 <strong>' + row[0] + '</strong> 吗？<br>物品将退回卖家', function(){
+                        showToast('🛑 已终止交易: ' + row[0], 'warn');
+                    });
+                    return;
+                }
+                if (text === '仲裁' && row.length >= 1) {
+                    var body = '<div style="margin-bottom:15px"><p>交易 <strong>' + row[0] + '</strong> 存在争议</p></div>' +
+                        '<div style="margin-bottom:15px"><label style="display:block;color:#888;margin-bottom:5px">仲裁结果</label>' +
+                        '<select id="arbitrateResult" style="width:100%;padding:8px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px">' +
+                        '<option value="buyer">判买家胜（物品归买家，退卖家金币）</option>' +
+                        '<option value="seller">判卖家胜（物品退卖家，退买家金币）</option>' +
+                        '<option value="cancel">取消交易（双方退还）</option></select></div>' +
+                        '<div><label style="display:block;color:#888;margin-bottom:5px">仲裁说明</label>' +
+                        '<textarea id="arbitrateNote" rows="3" placeholder="请输入仲裁理由..." style="width:100%;padding:8px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px;resize:vertical"></textarea></div>';
+                    var footer = '<button class="btn" onclick="closeGlobalModal()" style="background:#34495e;margin-right:10px">取消</button>' +
+                        '<button class="btn btn-primary" onclick="closeGlobalModal();showToast(&quot;⚖️ 仲裁完成&quot;,&quot;success&quot;)">提交仲裁</button>';
+                    showGlobalModal('⚖️ 交易仲裁 - ' + row[0], body, footer);
+                    return;
+                }
+            }
+
+            // ===== PVP页面 =====
+            if (page === 'pvp') {
+                if (text === '搜索') {
+                    var input = btn.closest('.search-box').querySelector('input');
+                    showToast('🔍 搜索: ' + (input.value || '全部对战'), 'success');
+                    return;
+                }
+                if (text === '回放' && row.length >= 9) {
+                    showDetailModal('⚔️ 对战回放 - ' + row[0], [
+                        ['对战ID', row[0]], ['玩家1', row[1] + ' (Lv.' + row[2] + ')'],
+                        ['玩家2', row[3] + ' (Lv.' + row[4] + ')'], ['胜者', row[5]],
+                        ['类型', row[6]], ['时长', row[7]], ['时间', row[8]],
+                        ['回合数', '12回合'], ['关键一击', row[5].replace(/[^\u4e00-\u9fa5]/g,'') + ' 使用「天降横财」造成 15,280 伤害'],
+                        ['战斗评分', '⭐⭐⭐⭐']
+                    ]);
+                    return;
+                }
+                if (text === '处理举报' && row.length >= 1) {
+                    var body = '<div style="margin-bottom:15px"><p>对战 <strong>' + row[0] + '</strong> 被举报</p></div>' +
+                        '<div style="margin-bottom:15px"><label style="display:block;color:#888;margin-bottom:5px">处理方式</label>' +
+                        '<select style="width:100%;padding:8px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px">' +
+                        '<option>警告举报方（恶意举报）</option><option>判定作弊，封禁被举报方</option>' +
+                        '<option>比赛结果作废，重赛</option><option>驳回举报</option></select></div>';
+                    var footer = '<button class="btn" onclick="closeGlobalModal()" style="background:#34495e;margin-right:10px">取消</button>' +
+                        '<button class="btn btn-primary" onclick="closeGlobalModal();showToast(&quot;✅ 举报已处理&quot;,&quot;success&quot;)">提交</button>';
+                    showGlobalModal('🚨 处理举报 - ' + row[0], body, footer);
+                    return;
+                }
+                if (text === '观战' && row.length >= 1) {
+                    showGlobalModal('👁️ 实时观战 - ' + row[0],
+                        '<div style="text-align:center;padding:30px 0"><div style="font-size:48px;margin-bottom:15px">⚔️</div>' +
+                        '<p style="font-size:16px;margin-bottom:10px"><strong>' + (row[1]||'队伍A') + '</strong> VS <strong>' + (row[3]||'队伍B') + '</strong></p>' +
+                        '<p style="color:#4ade80;font-size:14px">🔴 LIVE 对战进行中...</p>' +
+                        '<div style="margin-top:20px;padding:15px;background:#1a1a2e;border-radius:8px;text-align:left;font-family:monospace;font-size:13px;line-height:1.8">' +
+                        '<div style="color:#4ade80">[回合 8] 天机阁·玄机子 使用「聚宝盆」恢复 5,000 HP</div>' +
+                        '<div style="color:#f87171">[回合 8] 万宝楼·金算盘 使用「金蝉脱壳」闪避成功</div>' +
+                        '<div style="color:#fbbf24">[回合 9] 天机阁·小明 使用「天降横财」暴击！12,500 伤害</div>' +
+                        '</div></div>');
+                    return;
+                }
+            }
+
+            // ===== Events页面 =====
+            if (page === 'events') {
+                if (text === '管理' && row.length >= 7) {
+                    showDetailModal('🎉 活动详情 - ' + row[1], [
+                        ['活动ID', row[0]], ['名称', row[1]], ['类型', row[2]],
+                        ['开始时间', row[3]], ['结束时间', row[4]], ['参与人次', row[5]],
+                        ['状态', row[6]], ['奖池总额', '¥50,000'],
+                        ['已发奖励', '¥32,000'], ['参与率', '68%'],
+                        ['每日新增参与', '约500人/天']
+                    ]);
+                    return;
+                }
+                if (text === '终止' && row.length >= 2) {
+                    showConfirm('⚠️ 终止活动', '确定要终止活动 <strong>' + row[1] + '</strong> 吗？<br><br><span style="color:#e74c3c">终止后所有未发放的奖励将取消</span>', function(){
+                        showToast('🛑 已终止活动: ' + row[1], 'error');
+                    });
+                    return;
+                }
+                if (text === '编辑' && row.length >= 2) {
+                    var body = '<div style="margin-bottom:15px"><label style="display:block;color:#888;margin-bottom:5px">活动名称</label>' +
+                        '<input type="text" value="' + row[1] + '" style="width:100%;padding:8px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px"></div>' +
+                        '<div style="margin-bottom:15px"><label style="display:block;color:#888;margin-bottom:5px">开始时间</label>' +
+                        '<input type="date" value="2026-04-04" style="width:100%;padding:8px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px"></div>' +
+                        '<div style="margin-bottom:15px"><label style="display:block;color:#888;margin-bottom:5px">结束时间</label>' +
+                        '<input type="date" value="2026-04-06" style="width:100%;padding:8px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px"></div>' +
+                        '<div><label style="display:block;color:#888;margin-bottom:5px">活动描述</label>' +
+                        '<textarea rows="3" style="width:100%;padding:8px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px;resize:vertical">清明时节祭祖先，诚心祈福得大缘...</textarea></div>';
+                    var footer = '<button class="btn" onclick="closeGlobalModal()" style="background:#34495e;margin-right:10px">取消</button>' +
+                        '<button class="btn btn-primary" onclick="closeGlobalModal();showToast(&quot;✅ 活动已更新&quot;,&quot;success&quot;)">保存</button>';
+                    showGlobalModal('✏️ 编辑活动 - ' + row[1], body, footer);
+                    return;
+                }
+                if (text === '删除' && row.length >= 2) {
+                    showConfirm('⚠️ 删除活动', '确定要删除活动 <strong>' + row[1] + '</strong> 吗？', function(){
+                        showToast('🗑️ 已删除活动: ' + row[1], 'error');
+                    });
+                    return;
+                }
+                if (text === '数据' && row.length >= 2) {
+                    showDetailModal('📊 活动数据 - ' + row[1], [
+                        ['活动名称', row[1]], ['参与人次', row[5] || '12,500'],
+                        ['参与率', '72%'], ['日均参与', '1,785人'],
+                        ['奖励总额', '¥120,000'], ['人均花费', '¥9.6'],
+                        ['最高单笔', '¥2,000'], ['活跃峰值', '3,200人/小时'],
+                        ['新用户占比', '15%'], ['留存影响', '+8% 次日留存']
+                    ]);
+                    return;
+                }
+            }
+
+            // ===== Anticheat页面 =====
+            if (page === 'anticheat') {
+                if (text === '搜索') {
+                    var input = btn.closest('.search-box').querySelector('input');
+                    showToast('🔍 搜索: ' + (input.value || '全部记录'), 'success');
+                    return;
+                }
+                if (text === '审查' && row.length >= 8) {
+                    showDetailModal('🛡️ 异常审查 - ' + row[0], [
+                        ['检测ID', row[0]], ['用户', row[1] + ' (Lv.' + row[2] + ')'],
+                        ['异常类型', row[3]], ['严重度', row[4]], ['详情', row[5]],
+                        ['检测时间', row[6]], ['状态', row[7]],
+                        ['历史记录', '本月第2次被检测'], ['IP地址', '192.168.1.' + Math.floor(Math.random()*255)],
+                        ['设备信息', 'iPhone 15 Pro / iOS 19.2'],
+                        ['关联账号', '无可疑关联']
+                    ]);
+                    return;
+                }
+                if (text === '封禁' && row.length >= 2) {
+                    showConfirm('⚠️ 封禁作弊用户', '确定要封禁 <strong>' + row[1] + '</strong> 吗？<br><br><span style="color:#e74c3c">封禁后该账号所有数据将被冻结</span>', function(){
+                        showToast('🚫 已封禁: ' + row[1], 'error');
+                    });
+                    return;
+                }
+                if (text === '放行' && row.length >= 2) {
+                    showConfirm('✅ 确认放行', '确认 <strong>' + row[1] + '</strong> 的行为属于正常操作？<br>放行后将标记为误报', function(){
+                        showToast('✅ 已放行: ' + row[1], 'success');
+                    });
+                    return;
+                }
+                if (text === '详情' && row.length >= 7) {
+                    showDetailModal('🛡️ 检测详情 - ' + row[0], [
+                        ['检测ID', row[0]], ['用户', row[1]], ['等级', row[2]],
+                        ['异常类型', row[3]], ['严重度', row[4]], ['详情', row[5]],
+                        ['时间', row[6]], ['状态', row[7] || '已处理'],
+                        ['处理人', 'admin'], ['处理时间', '2026-03-28 13:00']
+                    ]);
+                    return;
+                }
+                if (text === '解封' && row.length >= 2) {
+                    showConfirm('🔓 解封用户', '确定要解封 <strong>' + row[1] + '</strong> 吗？', function(){
+                        showToast('🔓 已解封: ' + row[1], 'success');
+                    });
+                    return;
+                }
+            }
+
+            // ===== Robots页面 =====
+            if (page === 'robots') {
+                if (text === '搜索') {
+                    var input = btn.closest('.search-box').querySelector('input');
+                    showToast('🔍 搜索: ' + (input.value || '全部机器人'), 'success');
+                    return;
+                }
+                if (text === '详情' && row.length >= 7) {
+                    showDetailModal('🤖 机器人详情 - ' + row[1], [
+                        ['ID', row[0]], ['名称', row[1]], ['等级', row[2]],
+                        ['行为模式', row[3]], ['状态', row[4]], ['在线', row[5]],
+                        ['今日行动', row[6]], ['创建时间', '2026-03-01'],
+                        ['累计在线', '520小时'], ['化缘次数', '3,200次'],
+                        ['持有香火钱', '125,000'], ['所属门派', '摸鱼派']
+                    ]);
+                    return;
+                }
+                if (text === '上线' && row.length >= 2) {
+                    showToast('🟢 ' + row[1] + ' 已上线', 'success');
+                    return;
+                }
+                if (text === '停用' && row.length >= 2) {
+                    showConfirm('⚠️ 停用机器人', '停用后 <strong>' + row[1] + '</strong> 将变为离线状态，已添加好友的玩家仍可看到（显示离线）。确定停用？', function(){
+                        var statusCell = tr.cells[5]; if(statusCell){statusCell.innerHTML='<span class="badge badge-danger">离线</span>';} var stateCell=tr.cells[4]; if(stateCell){stateCell.innerHTML='<span class="badge badge-secondary">已停用</span>';}
+                        showToast('⏸️ 已停用: ' + row[1], 'warning');
+                    });
+                    return;
+                }
+            }
+
+            // ===== Recharge页面 =====
+            if (page === 'recharge') {
+                if (text === '详情' && row.length >= 7) {
+                    showDetailModal('💎 订单详情 - ' + row[0], [
+                        ['订单号', row[0]], ['用户ID', row[1]], ['档位', row[2]],
+                        ['金额', row[3]], ['元宝', row[4]], ['状态', row[5]],
+                        ['时间', row[6]], ['支付渠道', '微信支付'],
+                        ['支付流水号', 'WX' + Date.now()], ['首充', '否'],
+                        ['VIP等级', 'VIP3 钻石'], ['累计充值', '¥3,280']
+                    ]);
+                    return;
+                }
+                if (text === '退款' && row.length >= 1) {
+                    showConfirm('⚠️ 退款确认', '确定要退款订单 <strong>' + row[0] + '</strong> 吗？<br>金额: ' + (row[3]||'') + '<br><br><span style="color:#e74c3c">退款后对应元宝将被扣除</span>', function(){
+                        showToast('💸 已退款: ' + row[0], 'warn');
+                    });
+                    return;
+                }
+                if (text === '导出') {
+                    showToast('📥 正在导出充值报表...', 'success');
+                    return;
+                }
+                if (text === '修改配置') {
+                    showGlobalModal('💎 VIP配置编辑',
+                        '<p style="color:#888;margin-bottom:15px">修改VIP等级配置后将立即生效</p>' +
+                        '<div style="margin-bottom:12px"><label style="color:#888">VIP1 累计充值门槛</label><input type="number" value="6" style="width:100%;padding:8px;margin-top:4px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px"> 元</div>' +
+                        '<div style="margin-bottom:12px"><label style="color:#888">VIP5 累计充值门槛</label><input type="number" value="1000" style="width:100%;padding:8px;margin-top:4px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px"> 元</div>' +
+                        '<div style="margin-bottom:12px"><label style="color:#888">VIP10 累计充值门槛</label><input type="number" value="50000" style="width:100%;padding:8px;margin-top:4px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px"> 元</div>',
+                        '<button class="btn" onclick="closeGlobalModal()" style="background:#34495e;margin-right:10px">取消</button>' +
+                        '<button class="btn btn-primary" onclick="closeGlobalModal();showToast(&quot;✅ VIP配置已更新&quot;,&quot;success&quot;)">保存</button>');
+                    return;
+                }
+            }
+
+            // ===== Orders页面 =====
+            if (page === 'orders') {
+                if (text === '搜索') {
+                    var input = btn.closest('.search-box').querySelector('input');
+                    showToast('🔍 搜索: ' + (input.value || '全部订单'), 'success');
+                    return;
+                }
+                if (text === '详情' && row.length >= 8) {
+                    showDetailModal('📦 订单详情 - ' + row[0], [
+                        ['订单号', row[0]], ['用户ID', row[1]], ['用户昵称', row[2]],
+                        ['商品', row[3]], ['金额', row[4]], ['支付渠道', row[5]],
+                        ['状态', row[6]], ['创建时间', row[7]],
+                        ['支付时间', row[7]], ['到账时间', '即时到账'],
+                        ['IP地址', '113.87.x.x'], ['设备', 'iPhone 15']
+                    ]);
+                    return;
+                }
+                if (text === '取消' && row.length >= 1) {
+                    showConfirm('⚠️ 取消订单', '确定要取消订单 <strong>' + row[0] + '</strong> 吗？', function(){
+                        showToast('❌ 已取消订单: ' + row[0], 'warn');
+                    });
+                    return;
+                }
+            }
+
+            // ===== Announcements页面 =====
+            if (page === 'announcements') {
+                if (text === '编辑' && row.length >= 6) {
+                    var body = '<div style="margin-bottom:15px"><label style="display:block;color:#888;margin-bottom:5px">公告标题</label>' +
+                        '<input type="text" value="' + row[1] + '" style="width:100%;padding:8px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px"></div>' +
+                        '<div style="margin-bottom:15px"><label style="display:block;color:#888;margin-bottom:5px">公告类型</label>' +
+                        '<select style="width:100%;padding:8px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px">' +
+                        '<option>维护公告</option><option>活动公告</option><option>更新公告</option><option>紧急通知</option></select></div>' +
+                        '<div><label style="display:block;color:#888;margin-bottom:5px">公告内容</label>' +
+                        '<textarea rows="5" style="width:100%;padding:8px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px;resize:vertical">公告内容加载中...</textarea></div>';
+                    var footer = '<button class="btn" onclick="closeGlobalModal()" style="background:#34495e;margin-right:10px">取消</button>' +
+                        '<button class="btn btn-primary" onclick="closeGlobalModal();showToast(&quot;✅ 公告已更新&quot;,&quot;success&quot;)">保存</button>';
+                    showGlobalModal('✏️ 编辑公告 - ' + row[0], body, footer);
+                    return;
+                }
+                if (text === '下架' && row.length >= 2) {
+                    showConfirm('⚠️ 下架公告', '确定要下架 <strong>' + row[1] + '</strong> 吗？', function(){
+                        showToast('📤 已下架: ' + row[1], 'warn');
+                    });
+                    return;
+                }
+            }
+
+            // ===== Logs页面 =====
+            if (page === 'logs') {
+                if (text === '搜索') {
+                    var input = btn.closest('.search-box').querySelector('input');
+                    showToast('🔍 筛选日志: ' + (input.value || '全部'), 'success');
+                    return;
+                }
+            }
+
+            // ===== Settings页面 =====
+            if (page === 'settings') {
+                if (text === '修改' && row.length >= 3) {
+                    showConfirm('⚙️ 修改参数', '确定要修改 <strong>' + row[0] + '</strong> 吗？<br>修改后将立即生效', function(){
+                        showToast('✅ 已修改: ' + row[0], 'success');
+                    });
+                    return;
+                }
+                if (text === '重启' && row.length >= 1) {
+                    showConfirm('⚠️ 重启服务器', '确定要重启 <strong>' + row[0] + '</strong> 吗？<br><br><span style="color:#e74c3c">重启期间该服务将暂时不可用</span>', function(){
+                        showToast('🔄 正在重启: ' + row[0] + '...', 'warn');
+                    });
+                    return;
+                }
+            }
+
+            // ===== 分页按钮 =====
+            if (btn.closest('.pagination')) {
+                if (text === '上一页' || text === '下一页') {
+                    showToast('📄 ' + text, 'success');
+                } else {
+                    // 数字按钮
+                    btn.closest('.pagination').querySelectorAll('button').forEach(function(b){ b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    showToast('📄 第 ' + text + ' 页', 'success');
+                }
+                return;
+            }
+        });
+    
+        // ===== 新增11页面的交互逻辑 =====
+        // API_BASE 和 token 在下方API对接核心模块中统一声明
+
+
+        // ----- 📊 埋点管理 -----
+        function searchAnalytics() {
+            var kw = document.getElementById("analytics-search").value.trim().toLowerCase();
+            var rows = document.querySelectorAll("#analytics table tbody tr");
+            rows.forEach(function(r) { r.style.display = r.textContent.toLowerCase().includes(kw) ? "" : "none"; });
+        }
+        function addAnalytics() {
+            showModal("📊 埋点管理 - 新增", `
+                <div style="display:grid;gap:12px">
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">事件名称</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="事件名称"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">触发次数</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="触发次数"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">日均次数</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="日均次数"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">最近触发</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="最近触发"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">状态</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="状态"></div>
+                    <button onclick="alert('该功能开发中，敬请期待');closeModal()" style="padding:10px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold;margin-top:8px">保存</button>
+                </div>
+            `);
+        }
+        function prevAnalyticsPage() { console.log("analytics prev page"); }
+        function nextAnalyticsPage() { console.log("analytics next page"); }
+
+        // ----- 🏪 商品管理 -----
+        function searchProducts() {
+            var kw = document.getElementById("products-search").value.trim().toLowerCase();
+            var rows = document.querySelectorAll("#products table tbody tr");
+            rows.forEach(function(r) { r.style.display = r.textContent.toLowerCase().includes(kw) ? "" : "none"; });
+        }
+        function addProducts() {
+            showModal("🏪 商品管理 - 新增", `
+                <div style="display:grid;gap:12px">
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">商品名</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="商品名"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">类型</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" name="type" name="category" placeholder="类型"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">价格(金币)</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="价格(金币)"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">出售价</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="出售价"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">等级要求</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="等级要求"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">状态</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="状态"></div>
+                    <button onclick="alert('该功能开发中，敬请期待');closeModal()" style="padding:10px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold;margin-top:8px">保存</button>
+                </div>
+            `);
+        }
+        function prevProductsPage() { console.log("products prev page"); }
+        function nextProductsPage() { console.log("products next page"); }
+
+        // ----- 🎒 道具管理 -----
+        function searchItems() {
+            var kw = document.getElementById("items-search").value.trim().toLowerCase();
+            var rows = document.querySelectorAll("#items table tbody tr");
+            rows.forEach(function(r) { r.style.display = r.textContent.toLowerCase().includes(kw) ? "" : "none"; });
+        }
+        function addItems() {
+            showModal("🎒 道具管理 - 新增", `
+                <div style="display:grid;gap:12px">
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">道具名</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="道具名"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">类型</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="类型"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">品质</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" name="rarity" placeholder="品质"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">可叠加</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="可叠加"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">可交易</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="可交易"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">使用效果</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="使用效果"></div>
+                    <button onclick="alert('该功能开发中，敬请期待');closeModal()" style="padding:10px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold;margin-top:8px">保存</button>
+                </div>
+            `);
+        }
+        function prevItemsPage() { console.log("items prev page"); }
+        function nextItemsPage() { console.log("items next page"); }
+
+        // ----- 🏮 财神管理 -----
+        function searchDeities() {
+            var kw = document.getElementById("deities-search").value.trim().toLowerCase();
+            var rows = document.querySelectorAll("#deities table tbody tr");
+            rows.forEach(function(r) { r.style.display = r.textContent.toLowerCase().includes(kw) ? "" : "none"; });
+        }
+        function addDeities() {
+            showModal("🏮 财神管理 - 新增", `
+                <div style="display:grid;gap:12px">
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">财神名</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" name="name" placeholder="财神名"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">境界</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" name="rarity" placeholder="境界"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">属性</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" name="element" placeholder="属性"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">技能</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" name="skill_name" placeholder="技能"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">故事</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" name="description" placeholder="故事"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">解锁条件</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" name="unlock_level" placeholder="解锁条件"></div>
+                    <button onclick="saveModalForm('/api/deities/', loadDeities)" style="padding:10px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold;margin-top:8px">保存</button>
+                </div>
+            `);
+        }
+        function prevDeitiesPage() { console.log("deities prev page"); }
+        function nextDeitiesPage() { console.log("deities next page"); }
+
+        // ----- 📖 故事管理 -----
+        function searchStories() {
+            var kw = document.getElementById("stories-search").value.trim().toLowerCase();
+            var rows = document.querySelectorAll("#stories table tbody tr");
+            rows.forEach(function(r) { r.style.display = r.textContent.toLowerCase().includes(kw) ? "" : "none"; });
+        }
+        function addStories() {
+            showModal("📖 故事管理 - 新增", `
+                <div style="display:grid;gap:12px">
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">区域</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="区域"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">故事简介</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="故事简介"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">结局数</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="结局数"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">风格</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="风格"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">创建时间</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="创建时间"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">状态</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="状态"></div>
+                    <button onclick="saveModalForm('/api/stories/', loadStories)" style="padding:10px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold;margin-top:8px">保存</button>
+                </div>
+            `);
+        }
+        function prevStoriesPage() { console.log("stories prev page"); }
+        function nextStoriesPage() { console.log("stories next page"); }
+
+        // ----- 🐾 生灵管理 -----
+        function searchCreatures() {
+            var kw = document.getElementById("creatures-search").value.trim().toLowerCase();
+            var rows = document.querySelectorAll("#creatures table tbody tr");
+            rows.forEach(function(r) { r.style.display = r.textContent.toLowerCase().includes(kw) ? "" : "none"; });
+        }
+        function addCreatures() {
+            showModal("🐾 生灵管理 - 新增", `
+                <div style="display:grid;gap:12px">
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">名称</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="名称"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">类型</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="类型"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">品质</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="品质"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">基础攻击</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="基础攻击"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">基础防御</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="基础防御"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">技能</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="技能"></div>
+                    <button onclick="alert('该功能开发中，敬请期待');closeModal()" style="padding:10px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold;margin-top:8px">保存</button>
+                </div>
+            `);
+        }
+        function prevCreaturesPage() { console.log("creatures prev page"); }
+        function nextCreaturesPage() { console.log("creatures next page"); }
+
+        // ----- ⚡ 技能管理 -----
+        function searchSkillmgr() {
+            var kw = document.getElementById("skillmgr-search").value.trim().toLowerCase();
+            var rows = document.querySelectorAll("#skillmgr table tbody tr");
+            rows.forEach(function(r) { r.style.display = r.textContent.toLowerCase().includes(kw) ? "" : "none"; });
+        }
+        function addSkillmgr() {
+            showModal("⚡ 技能管理 - 新增", `
+                <div style="display:grid;gap:12px">
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">技能名</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="技能名"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">类型</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="类型"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">元素</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="元素"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">伤害</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="伤害"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">消耗</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="消耗"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">等级要求</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="等级要求"></div>
+                    <button onclick="alert('该功能开发中，敬请期待');closeModal()" style="padding:10px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold;margin-top:8px">保存</button>
+                </div>
+            `);
+        }
+        function prevSkillmgrPage() { console.log("skillmgr prev page"); }
+        function nextSkillmgrPage() { console.log("skillmgr next page"); }
+
+        // ----- 🗡️ 装备管理 -----
+        function searchEquipmgr() {
+            var kw = document.getElementById("equipmgr-search").value.trim().toLowerCase();
+            var rows = document.querySelectorAll("#equipmgr table tbody tr");
+            rows.forEach(function(r) { r.style.display = r.textContent.toLowerCase().includes(kw) ? "" : "none"; });
+        }
+        function addEquipmgr() {
+            showModal("🗡️ 装备管理 - 新增", `
+                <div style="display:grid;gap:12px">
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">装备名</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="装备名"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">槽位</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="槽位"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">品质</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="品质"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">属性加成</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="属性加成"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">等级要求</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="等级要求"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">掉落来源</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="掉落来源"></div>
+                    <button onclick="alert('该功能开发中，敬请期待');closeModal()" style="padding:10px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold;margin-top:8px">保存</button>
+                </div>
+            `);
+        }
+        function prevEquipmgrPage() { console.log("equipmgr prev page"); }
+        function nextEquipmgrPage() { console.log("equipmgr next page"); }
+
+        // ----- 🌍 财域管理 -----
+        function searchDomains() {
+            var kw = document.getElementById("domains-search").value.trim().toLowerCase();
+            var rows = document.querySelectorAll("#domains table tbody tr");
+            rows.forEach(function(r) { r.style.display = r.textContent.toLowerCase().includes(kw) ? "" : "none"; });
+        }
+        function addDomains() {
+            showModal("🌍 财域管理 - 新增", `
+                <div style="display:grid;gap:12px">
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">财域名</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" name="name" placeholder="财域名"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">五行</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" name="element" placeholder="五行"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">地支</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="地支"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">等级要求</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="等级要求"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">怪物数</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="怪物数"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">掉落表</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="掉落表"></div>
+                    <button onclick="saveModalForm('/api/domains/', loadDomains)" style="padding:10px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold;margin-top:8px">保存</button>
+                </div>
+            `);
+        }
+        function prevDomainsPage() { console.log("domains prev page"); }
+        function nextDomainsPage() { console.log("domains next page"); }
+
+        // ----- 🏆 任务成就 -----
+        function searchQuests() {
+            var kw = document.getElementById("quests-search").value.trim().toLowerCase();
+            var rows = document.querySelectorAll("#quests table tbody tr");
+            rows.forEach(function(r) { r.style.display = r.textContent.toLowerCase().includes(kw) ? "" : "none"; });
+        }
+        function addQuests() {
+            showModal("🏆 任务成就 - 新增", `
+                <div style="display:grid;gap:12px">
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">名称</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="名称"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">类型</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="类型"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">描述</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" name="description" name="description" placeholder="描述"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">奖励</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="奖励"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">完成条件</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="完成条件"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">完成人数</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="完成人数"></div>
+                    <button onclick="saveModalForm('/api/quests/', loadQuests)" style="padding:10px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold;margin-top:8px">保存</button>
+                </div>
+            `);
+        }
+        function prevQuestsPage() { console.log("quests prev page"); }
+        function nextQuestsPage() { console.log("quests next page"); }
+
+        // ----- 🎨 装修管理 -----
+        function searchDecoration() {
+            var kw = document.getElementById("decoration-search").value.trim().toLowerCase();
+            var rows = document.querySelectorAll("#decoration table tbody tr");
+            rows.forEach(function(r) { r.style.display = r.textContent.toLowerCase().includes(kw) ? "" : "none"; });
+        }
+        function addDecoration() {
+            showModal("🎨 装修管理 - 新增", `
+                <div style="display:grid;gap:12px">
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">装修名</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" name="name" placeholder="装修名"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">类型</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="类型"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">品质</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="品质"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">价格</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" name="price_gold" placeholder="价格"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">效果</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" name="bonus_type" placeholder="效果"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">上架状态</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" name="is_limited" placeholder="上架状态"></div>
+                    <button onclick="saveModalForm('/api/decoration/', loadDecoration)" style="padding:10px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold;margin-top:8px">保存</button>
+                </div>
+            `);
+        }
+        function prevDecorationPage() { console.log("decoration prev page"); }
+        function nextDecorationPage() { console.log("decoration next page"); }
+
+        
+        
+        // 通用弹窗表单保存
+        async function saveModalForm(apiPath, loadFn) {
+            var inputs = document.querySelectorAll('.modal-content input, .modal-content select, .modal-content textarea');
+            var data = {};
+            inputs.forEach(function(inp) {
+                if (inp.name) data[inp.name] = inp.value || '';
+            });
+            var result = await apiFetch(apiPath, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data) 
+            });
+            if (result && result.code === 200) {
+                closeModal();
+                if (typeof loadFn === 'function') loadFn();
+                showToast('保存成功！');
+            } else {
+                alert('保存失败: ' + (result ? result.message : '未知错误'));
+            }
+        }
+        function showToast(msg) {
+            var t = document.createElement('div');
+            t.textContent = msg;
+            t.style.cssText = 'position:fixed;top:20px;right:20px;background:#2ecc71;color:#fff;padding:12px 24px;border-radius:8px;z-index:99999;font-weight:bold;';
+            document.body.appendChild(t);
+            setTimeout(function(){ t.remove(); }, 2000);
+        }
+
+        // ===== API对接核心 =====
+        let API_BASE = localStorage.getItem('admin_api_base') || 'http://localhost:3000';
+        let ADMIN_TOKEN = localStorage.getItem('admin_token') || '';
+
+        async function apiFetch(path, options = {}) {
+            const url = API_BASE + path;
+            const headers = { 'Content-Type': 'application/json', ...options.headers };
+            if (ADMIN_TOKEN) headers['Authorization'] = 'Bearer ' + ADMIN_TOKEN;
+            try {
+                const res = await fetch(url, { ...options, headers });
+                const data = await res.json();
+                if (data.code === 401) { showLoginOverlay(); return null; }
+                return data;
+            } catch(e) {
+                console.error('API请求失败:', url, e);
+                return null;
+            }
+        }
+
+        function showLoginOverlay() {
+            document.getElementById('login-overlay').style.display = 'flex';
+        }
+
+        async function adminLogin() {
+            const username = document.getElementById('admin-username').value;
+            const password = document.getElementById('admin-password').value;
+            API_BASE = document.getElementById('api-base-input').value.replace(/\/$/, '');
+            localStorage.setItem('admin_api_base', API_BASE);
+
+            const errEl = document.getElementById('login-error');
+            errEl.style.display = 'none';
+
+            const data = await apiFetch('/api/auth/login', {
+                method: 'POST',
+                body: JSON.stringify({ username, password })
+            });
+
+            if (data && data.code === 200 && data.data && data.data.token) {
+                ADMIN_TOKEN = data.data.token;
+                localStorage.setItem('admin_token', ADMIN_TOKEN);
+                document.getElementById('login-overlay').style.display = 'none';
+                loadDashboard();
+            } else {
+                errEl.textContent = (data && data.message) || '登录失败，请检查API地址和账号';
+                errEl.style.display = 'block';
+            }
+        }
+
+        // 自动登录（如果有缓存token）
+        window.addEventListener('DOMContentLoaded', async () => {
+            if (ADMIN_TOKEN) {
+                const check = await apiFetch('/api/health');
+                if (check && check.code === 200) {
+                    document.getElementById('login-overlay').style.display = 'none';
+                    loadDashboard();
+                    return;
+                }
+            }
+            showLoginOverlay();
+        });
+
+        // ===== Dashboard数据加载 =====
+        async function loadDashboard() {
+            const data = await apiFetch('/api/admin/dashboard');
+            if (!data || data.code !== 200) return;
+            const d = data.data;
+
+            // 统计卡片
+            const cards = document.querySelectorAll('#dashboard .stat-card .value');
+            if (cards.length >= 4) {
+                cards[0].textContent = (d.users?.total || 0).toLocaleString();
+                cards[1].textContent = (d.users?.activeToday || 0).toLocaleString();
+                cards[2].textContent = '—';  // 在线数需要WebSocket
+                cards[3].textContent = '¥' + (d.revenue?.todayCNY || 0).toLocaleString();
+            }
+
+            // 更新管理员名称
+            const adminInfo = document.querySelector('#dashboard .admin-info span');
+            if (adminInfo) adminInfo.textContent = '管理员：' + (localStorage.getItem('admin_username') || 'admin');
+        }
+
+        // ===== Users数据加载 =====
+        async function loadUsers(page = 1) {
+            const data = await apiFetch('/api/admin/users?page=' + page + '&limit=20');
+            if (!data || data.code !== 200) return;
+
+            const tbody = document.querySelector('#users table tbody');
+            if (!tbody) return;
+
+            const users = data.data.users || [];
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#888;padding:20px">暂无用户数据</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = users.map(u => `
+                <tr>
+                    <td>${u.id}</td>
+                    <td>${u.player_id || '-'}</td>
+                    <td>${u.username}</td>
+                    <td>${u.nickname || '-'}</td>
+                    <td>Lv.${u.level || 1}</td>
+                    <td>${u.realm_name || '灵种入体'}</td>
+                    <td>${(u.gold || 0).toLocaleString()}</td>
+                    <td>${(u.yuanbao || 0).toLocaleString()}</td>
+                    <td><span class="badge ${u.status === 1 ? 'badge-success' : 'badge-danger'}">${u.status === 1 ? '正常' : '封禁'}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="viewUser(${u.id})">查看</button>
+                        ${u.status === 1 
+                            ? '<button class=\"btn btn-sm btn-danger\" onclick=\"banUser(' + u.id + ')\">封禁</button>'
+                            : '<button class=\"btn btn-sm btn-success\" onclick=\"unbanUser(' + u.id + ')\">解封</button>'}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function viewUser(userId) {
+            const data = await apiFetch('/api/admin/users/' + userId);
+            if (!data || data.code !== 200) return;
+            const u = data.data;
+            showModal('用户详情 #' + userId, `
+                <div style="display:grid;gap:8px;font-size:13px">
+                    <div><b>用户名:</b> ${u.username || '-'}</div>
+                    <div><b>昵称:</b> ${u.player?.nickname || '-'}</div>
+                    <div><b>等级:</b> Lv.${u.player?.level || 1} ${u.player?.realm_name || '凡人'}</div>
+                    <div><b>金币:</b> ${(u.player?.gold || 0).toLocaleString()}</div>
+                    <div><b>元宝:</b> ${(u.player?.yuanbao || 0).toLocaleString()}</div>
+                    <div><b>VIP:</b> ${u.player?.vip_level || 0}</div>
+                    <div><b>累计充值:</b> ¥${u.player?.total_recharge || '0.00'}</div>
+                    <div><b>注册时间:</b> ${u.created_at ? new Date(u.created_at).toLocaleString() : '-'}</div>
+                    <div><b>最后登录:</b> ${u.last_login_at ? new Date(u.last_login_at).toLocaleString() : '-'}</div>
+                </div>
+            `);
+        }
+
+        async function banUser(userId) {
+            const reason = prompt('封禁原因:');
+            if (!reason) return;
+            const data = await apiFetch('/api/admin/users/' + userId + '/ban', {
+                method: 'POST', body: JSON.stringify({ reason })
+            });
+            if (data && data.code === 200) { alert('封禁成功'); loadUsers(); }
+            else alert('操作失败: ' + (data?.message || '未知错误'));
+        }
+
+        async function unbanUser(userId) {
+            if (!confirm('确定解封该用户?')) return;
+            const data = await apiFetch('/api/admin/users/' + userId + '/unban', { method: 'POST' });
+            if (data && data.code === 200) { alert('解封成功'); loadUsers(); }
+            else alert('操作失败: ' + (data?.message || '未知错误'));
+        }
+
+        // ===== Logs数据加载 =====
+        async function loadLogs(page = 1) {
+            const data = await apiFetch('/api/admin/logs?page=' + page + '&limit=20');
+            if (!data || data.code !== 200) return;
+
+            const tbody = document.querySelector('#logs table tbody');
+            if (!tbody) return;
+
+            const logs = data.data.logs || [];
+            if (logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#888;padding:20px">暂无日志</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = logs.map(l => `
+                <tr>
+                    <td>${l.id}</td>
+                    <td>${l.username || '系统'}</td>
+                    <td>${l.action}</td>
+                    <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis">${l.details || '-'}</td>
+                    <td>${new Date(l.created_at).toLocaleString()}</td>
+                </tr>
+            `).join('');
+        }
+
+        // ===== 管理后台全页面API对接 =====
+// 有API的页面：真实数据加载
+// 无API的页面：保留前端mock
+
+// --- 充值管理 ---
+async function loadRecharge(page = 1) {
+    const data = await apiFetch('/api/recharge/orders?page=' + page + '&limit=20');
+    const tbody = document.querySelector('#recharge table tbody');
+    if (!tbody) return;
+    if (!data || data.code !== 200 || !data.data) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u5145\u503c\u8bb0\u5f55</td></tr>';
+        return;
+    }
+    const orders = data.data.orders || data.data || [];
+    if (!orders.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u5145\u503c\u8bb0\u5f55</td></tr>';
+        return;
+    }
+    tbody.innerHTML = orders.map(o => '<tr>' +
+        '<td>' + (o.order_no || o.id) + '</td>' +
+        '<td>' + (o.user_id || '-') + '</td>' +
+        '<td>' + (o.package_name || o.amount + '\u5143') + '</td>' +
+        '<td>\u00a5' + (o.amount || 0) + '</td>' +
+        '<td>' + (o.yuanbao || 0) + '\u5143\u5b9d</td>' +
+        '<td><span class="badge ' + (o.status === 'paid' ? 'badge-success' : 'badge-warning') + '">' + (o.status === 'paid' ? '\u5df2\u652f\u4ed8' : '\u5f85\u652f\u4ed8') + '</span></td>' +
+        '<td>' + (o.created_at ? new Date(o.created_at).toLocaleString() : '-') + '</td>' +
+        '</tr>').join('');
+}
+
+// --- 订单管理 ---
+async function loadOrders(page = 1) {
+    // 订单和充值共用API
+    await loadRecharge(page);
+    // 把数据渲染到orders页面的表格
+    const srcTbody = document.querySelector('#recharge table tbody');
+    const dstTbody = document.querySelector('#orders table tbody');
+    if (srcTbody && dstTbody && dstTbody !== srcTbody) {
+        dstTbody.innerHTML = srcTbody.innerHTML;
+    }
+}
+
+// --- 交易管理 ---
+async function loadTrades(page = 1) {
+    const data = await apiFetch('/api/market/?page=' + page + '&limit=20');
+    const tbody = document.querySelector('#trades table tbody');
+    if (!tbody) return;
+    if (!data || data.code !== 200) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u4ea4\u6613\u6570\u636e</td></tr>';
+        return;
+    }
+    const items = data.data.stalls || data.data || [];
+    if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u4ea4\u6613\u6570\u636e</td></tr>';
+        return;
+    }
+    tbody.innerHTML = items.map(s => '<tr>' +
+        '<td>' + (s.id || '-') + '</td>' +
+        '<td>' + (s.seller_name || 'ID:' + s.user_id) + '</td>' +
+        '<td>' + (s.item_name || '-') + '</td>' +
+        '<td>' + (s.price || 0) + '</td>' +
+        '<td>' + (s.quantity || 1) + '</td>' +
+        '<td><span class="badge badge-success">\u5728\u552e</span></td>' +
+        '<td>' + (s.created_at ? new Date(s.created_at).toLocaleString() : '-') + '</td>' +
+        '</tr>').join('');
+}
+
+// --- 商品管理 ---
+async function loadProducts(page = 1) {
+    const data = await apiFetch('/api/shop/?page=' + page + '&limit=50');
+    const tbody = document.querySelector('#products table tbody');
+    if (!tbody) return;
+    if (!data || data.code !== 200) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u5546\u54c1\u6570\u636e</td></tr>';
+        return;
+    }
+    const items = data.data.items || data.data || [];
+    if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u5546\u54c1\u6570\u636e</td></tr>';
+        return;
+    }
+    tbody.innerHTML = items.map(i => '<tr>' +
+        '<td>' + (i.id || '-') + '</td>' +
+        '<td>' + (i.name || '-') + '</td>' +
+        '<td>' + (i.type || '-') + '</td>' +
+        '<td>' + (i.price || 0) + '</td>' +
+        '<td>' + (i.stock === -1 ? '\u65e0\u9650' : (i.stock || 0)) + '</td>' +
+        '<td><span class="badge badge-success">\u4e0a\u67b6</span></td>' +
+        '</tr>').join('');
+}
+
+// --- 道具管理 ---
+async function loadItems(page = 1) {
+    const data = await apiFetch('/api/admin/items?page=' + page + '&limit=50');
+    const tbody = document.querySelector('#items table tbody');
+    if (!tbody) return;
+    if (!data || data.code !== 200) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u9053\u5177\u6570\u636e</td></tr>';
+        return;
+    }
+    const items = data.data.items || data.data || [];
+    if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u9053\u5177\u6570\u636e</td></tr>';
+        return;
+    }
+    tbody.innerHTML = items.map(i => '<tr>' +
+        '<td>' + (i.id || '-') + '</td>' +
+        '<td>' + (i.name || '-') + '</td>' +
+        '<td>' + (i.type || i.category || '-') + '</td>' +
+        '<td>' + (i.rarity || '\u666e\u901a') + '</td>' +
+        '<td>' + (i.description || '-') + '</td>' +
+        '<td><button class="btn btn-sm btn-primary" onclick="viewItemDetail(' + i.id + ')">\u8be6\u60c5</button></td>' +
+        '</tr>').join('');
+}
+async function viewItemDetail(itemId) {
+    showToast('\ud83d\udce6 \u9053\u5177#' + itemId + ' \u8be6\u60c5\u529f\u80fd\u5f00\u53d1\u4e2d', 'info');
+}
+
+// --- 生灵管理 (灵兽+精怪) ---
+async function loadCreatures() {
+    const petsData = await apiFetch('/api/pets/');
+    const spiritsData = await apiFetch('/api/spirits/');
+    const tbody = document.querySelector('#creatures table tbody');
+    if (!tbody) return;
+
+    var rows = [];
+    if (petsData && petsData.code === 200 && petsData.data) {
+        var pets = petsData.data.pets || petsData.data || [];
+        pets.forEach(function(p) {
+            rows.push('<tr><td>' + (p.id || '-') + '</td><td>' + (p.name || '-') + '</td><td><span class="badge badge-info">\u7075\u517d</span></td><td>' + (p.rarity || '\u666e\u901a') + '</td><td>Lv.' + (p.level || 1) + '</td><td>' + (p.skill || '-') + '</td></tr>');
+        });
+    }
+    if (spiritsData && spiritsData.code === 200 && spiritsData.data) {
+        var spirits = spiritsData.data.spirits || spiritsData.data || [];
+        spirits.forEach(function(s) {
+            rows.push('<tr><td>' + (s.id || '-') + '</td><td>' + (s.name || '-') + '</td><td><span class="badge badge-warning">\u7cbe\u602a</span></td><td>' + (s.rarity || '\u666e\u901a') + '</td><td>Lv.' + (s.level || 1) + '</td><td>' + (s.skill || '-') + '</td></tr>');
+        });
+    }
+    if (rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u751f\u7075\u6570\u636e</td></tr>';
+    } else {
+        tbody.innerHTML = rows.join('');
+    }
+}
+
+// --- 技能管理 ---
+async function loadSkillMgr() {
+    const data = await apiFetch('/api/skills/');
+    const tbody = document.querySelector('#skillmgr table tbody');
+    if (!tbody) return;
+    if (!data || data.code !== 200) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u6280\u80fd\u6570\u636e</td></tr>';
+        return;
+    }
+    const skills = data.data.skills || data.data || [];
+    if (!skills.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u6280\u80fd\u6570\u636e</td></tr>';
+        return;
+    }
+    tbody.innerHTML = skills.map(s => '<tr>' +
+        '<td>' + (s.id || '-') + '</td>' +
+        '<td>' + (s.name || '-') + '</td>' +
+        '<td>' + (s.type || '-') + '</td>' +
+        '<td>' + (s.element || '-') + '</td>' +
+        '<td>' + (s.damage || s.effect || '-') + '</td>' +
+        '<td>Lv.' + (s.max_level || 10) + '</td>' +
+        '</tr>').join('');
+}
+
+// --- 装备管理 ---
+async function loadEquipMgr() {
+    const data = await apiFetch('/api/equipment/');
+    const tbody = document.querySelector('#equipmgr table tbody');
+    if (!tbody) return;
+    if (!data || data.code !== 200) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u88c5\u5907\u6570\u636e</td></tr>';
+        return;
+    }
+    const equips = data.data.equipment || data.data || [];
+    if (!equips.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u88c5\u5907\u6570\u636e</td></tr>';
+        return;
+    }
+    tbody.innerHTML = equips.map(e => '<tr>' +
+        '<td>' + (e.id || '-') + '</td>' +
+        '<td>' + (e.name || '-') + '</td>' +
+        '<td>' + (e.slot || e.type || '-') + '</td>' +
+        '<td><span class="badge badge-warning">' + (e.rarity || '\u666e\u901a') + '</span></td>' +
+        '<td>+' + (e.attack || 0) + ' ATK / +' + (e.defense || 0) + ' DEF</td>' +
+        '<td>Lv.' + (e.level || 0) + '/' + (e.enhance_level || 0) + '\u5f3a</td>' +
+        '</tr>').join('');
+}
+
+// --- 门派管理 ---
+async function loadSects() {
+    const data = await apiFetch('/api/sects/');
+    const tbody = document.querySelector('#sects table tbody');
+    if (!tbody) return;
+    if (!data || data.code !== 200) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u95e8\u6d3e\u6570\u636e</td></tr>';
+        return;
+    }
+    const sects = data.data.sects || data.data || [];
+    if (!sects.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u95e8\u6d3e\u6570\u636e</td></tr>';
+        return;
+    }
+    tbody.innerHTML = sects.map(s => '<tr>' +
+        '<td>' + (s.id || '-') + '</td>' +
+        '<td style="color:#FFD700;font-weight:bold">' + (s.name || '-') + '</td>' +
+        '<td>' + (s.leader_name || 'ID:' + (s.leader_id || '-')) + '</td>' +
+        '<td>' + (s.member_count || 0) + '/' + (s.max_members || 50) + '</td>' +
+        '<td>Lv.' + (s.level || 1) + '</td>' +
+        '<td>' + (s.funds || 0).toLocaleString() + '</td>' +
+        '</tr>').join('');
+}
+
+// --- 师徒管理 ---
+async function loadMentors() {
+    const data = await apiFetch('/api/mentor/');
+    const tbody = document.querySelector('#mentors table tbody');
+    if (!tbody) return;
+    if (!data || data.code !== 200) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u5e08\u5f92\u6570\u636e</td></tr>';
+        return;
+    }
+    const rels = data.data.relationships || data.data || [];
+    if (!rels.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u5e08\u5f92\u6570\u636e</td></tr>';
+        return;
+    }
+    tbody.innerHTML = rels.map(r => '<tr>' +
+        '<td>' + (r.id || '-') + '</td>' +
+        '<td style="color:#FFD700">' + (r.mentor_name || 'ID:' + r.mentor_id) + '</td>' +
+        '<td>' + (r.apprentice_name || 'ID:' + r.apprentice_id) + '</td>' +
+        '<td><span class="badge badge-success">' + (r.status || '\u8fdb\u884c\u4e2d') + '</span></td>' +
+        '<td>' + (r.created_at ? new Date(r.created_at).toLocaleString() : '-') + '</td>' +
+        '</tr>').join('');
+}
+
+// --- PVP管理 ---
+async function loadPvp() {
+    const data = await apiFetch('/api/pvp/rank?limit=50');
+    const tbody = document.querySelector('#pvp table tbody');
+    if (!tbody) return;
+    if (!data || data.code !== 200) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0PVP\u6570\u636e</td></tr>';
+        return;
+    }
+    const ranks = data.data.rankings || data.data || [];
+    if (!ranks.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0PVP\u6570\u636e</td></tr>';
+        return;
+    }
+    tbody.innerHTML = ranks.map((r, idx) => '<tr>' +
+        '<td style="color:#FFD700;font-weight:bold">' + (idx + 1) + '</td>' +
+        '<td>' + (r.username || r.player_name || 'ID:' + r.user_id) + '</td>' +
+        '<td>' + (r.rating || r.score || 0) + '</td>' +
+        '<td>' + (r.wins || 0) + '\u80dc/' + (r.losses || 0) + '\u8d1f</td>' +
+        '<td>' + (r.wins ? ((r.wins / (r.wins + (r.losses || 0)) * 100).toFixed(1)) : '0') + '%</td>' +
+        '<td><span class="badge badge-info">' + (r.rank_title || '\u65b0\u624b') + '</span></td>' +
+        '</tr>').join('');
+}
+
+// --- 活动管理 ---
+async function loadEvents() {
+    const data = await apiFetch('/api/events/');
+    const tbody = document.querySelector('#events table tbody');
+    if (!tbody) return;
+    if (!data || data.code !== 200) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u6d3b\u52a8\u6570\u636e</td></tr>';
+        return;
+    }
+    const events = data.data.events || data.data || [];
+    if (!events.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u6d3b\u52a8\u6570\u636e</td></tr>';
+        return;
+    }
+    tbody.innerHTML = events.map(e => {
+        var status = '\u672a\u5f00\u59cb';
+        var badge = 'badge-info';
+        var now = Date.now();
+        var start = e.start_time ? new Date(e.start_time).getTime() : 0;
+        var end = e.end_time ? new Date(e.end_time).getTime() : 0;
+        if (now >= start && now <= end) { status = '\u8fdb\u884c\u4e2d'; badge = 'badge-success'; }
+        else if (now > end) { status = '\u5df2\u7ed3\u675f'; badge = 'badge-secondary'; }
+        return '<tr>' +
+            '<td>' + (e.id || '-') + '</td>' +
+            '<td>' + (e.name || '-') + '</td>' +
+            '<td><span class="badge badge-warning">' + (e.type || '-') + '</span></td>' +
+            '<td>' + (e.start_time ? new Date(e.start_time).toLocaleDateString() : '-') + '</td>' +
+            '<td>' + (e.end_time ? new Date(e.end_time).toLocaleDateString() : '-') + '</td>' +
+            '<td>' + (e.participants || 0) + '</td>' +
+            '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
+            '</tr>';
+    }).join('');
+}
+
+// --- 反作弊 ---
+async function loadAntiCheat(page = 1) {
+    const data = await apiFetch('/api/admin/cheats?page=' + page + '&limit=20');
+    const tbody = document.querySelector('#anticheat table tbody');
+    if (!tbody) return;
+    if (!data || data.code !== 200) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u4f5c\u5f0a\u8bb0\u5f55\uff08\u597d\u73b0\u8c61\uff01\uff09</td></tr>';
+        return;
+    }
+    const cheats = data.data.cheats || data.data || [];
+    if (!cheats.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u4f5c\u5f0a\u8bb0\u5f55\uff08\u597d\u73b0\u8c61\uff01\uff09</td></tr>';
+        return;
+    }
+    tbody.innerHTML = cheats.map(c => '<tr>' +
+        '<td>' + (c.id || '-') + '</td>' +
+        '<td>' + (c.username || 'ID:' + c.user_id) + '</td>' +
+        '<td>' + (c.type || '-') + '</td>' +
+        '<td>' + (c.details || '-') + '</td>' +
+        '<td><span class="badge ' + (c.resolved ? 'badge-success' : 'badge-danger') + '">' + (c.resolved ? '\u5df2\u5904\u7406' : '\u5f85\u5904\u7406') + '</span></td>' +
+        '<td>' + (c.created_at ? new Date(c.created_at).toLocaleString() : '-') + '</td>' +
+        '</tr>').join('');
+}
+
+        // ===== 页面切换时自动加载数据 =====
+        var _autoRefreshTimer = null;
+        var _currentPageName = 'dashboard';
+
+        function _loadCurrentPage(name) {
+            switch(name) {
+                case 'dashboard': loadDashboard(); break;
+                case 'users': loadUsers(); break;
+                case 'logs': loadLogs(); break;
+                case 'recharge': loadRecharge(); break;
+                case 'orders': loadOrders(); break;
+                case 'trades': loadTrades(); break;
+                case 'products': loadProducts(); break;
+                case 'items': loadItems(); break;
+                case 'creatures': loadCreatures(); break;
+                case 'skillmgr': loadSkillMgr(); break;
+                case 'equipmgr': loadEquipMgr(); break;
+                case 'sects': loadSects(); break;
+                case 'mentors': loadMentors(); break;
+                case 'pvp': loadPvp(); break;
+                case 'events': loadEvents(); break;
+                case 'anticheat': loadAntiCheat(); break;
+                case 'announcements': loadAnnouncements(); break;
+                case 'deities': loadDeities(); break;
+                case 'stories': loadStories(); break;
+                case 'domains': loadDomains(); break;
+                case 'quests': loadQuests(); break;
+                case 'decoration': loadDecoration(); break;
+                case 'analytics': loadAnalytics(); break;
+                case 'settings': loadSettings(); break;
+            }
+        }
+
+        const _origShowPage = showPage;
+        showPage = function(pageName) {
+            _origShowPage(pageName);
+            _currentPageName = pageName;
+            _loadCurrentPage(pageName);
+            // 自动刷新：每15秒重新加载当前页面数据
+            if (_autoRefreshTimer) clearInterval(_autoRefreshTimer);
+            _autoRefreshTimer = setInterval(function() {
+                _loadCurrentPage(_currentPageName);
+            }, 15000);
+        };
+
+        
+        // ===== 机器人随机名称生成器 =====
+        const ROBOT_SURNAMES = ['赵','钱','孙','李','周','吴','郑','王','冯','陈','金','银','马','朱','林','黄','张','刘','杨','许','何','吕','施','曹','严','华','魏','陶','姜','戚','谢','邹','柏','苏','潘','葛','范','彭','鲁','韦','昌','苗','凤','花','方','俞','任','袁','柳','唐','薛','雷','贺','倪','汤','龙','龚','万','段','石'];
+        const ROBOT_NAMES = ['聚财','鸿运','瑞光','如意','福来','财旺','宝山','吉祥','锦绣','元亨','金玉','祥云','通宝','万利','承恩','得道','清风','明月','紫霞','玄武','春生','秋实','天赐','地利','星辰','云鹤','松柏','竹梅','兰芝','玉堂','富贵','荣华','太平','安康','永昌','长青','百川','千帆','逸仙','凌云','飞鸿','腾达','进宝','招财','纳福','迎祥','开泰','亨通','利达','贞吉'];
+        // ===== 管理后台第二批API对接（8个页面） =====
+
+// --- 公告管理 ---
+async function loadAnnouncements() {
+    const data = await apiFetch('/api/announcements/');
+    const tbody = document.querySelector('#announcements table tbody');
+    if (!tbody) return;
+    if (!data || data.code !== 200) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u516c\u544a</td></tr>';
+        return;
+    }
+    const items = data.data.announcements || [];
+    if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u516c\u544a</td></tr>';
+        return;
+    }
+    tbody.innerHTML = items.map(a => '<tr>' +
+        '<td>' + a.id + '</td>' +
+        '<td>' + (a.title || '-') + '</td>' +
+        '<td><span class="badge badge-info">' + (a.type || 'system') + '</span></td>' +
+        '<td>' + (a.priority || 0) + '</td>' +
+        '<td><span class="badge ' + (a.is_active ? 'badge-success' : 'badge-secondary') + '">' + (a.is_active ? '\u542f\u7528' : '\u505c\u7528') + '</span></td>' +
+        '<td>' + (a.created_at ? new Date(a.created_at).toLocaleString() : '-') + '</td>' +
+        '</tr>').join('');
+}
+
+// --- 财神管理 ---
+async function loadDeities() {
+    const data = await apiFetch('/api/deities/');
+    const tbody = document.querySelector('#deities table tbody');
+    if (!tbody) return;
+    if (!data || data.code !== 200) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u8d22\u795e\u6570\u636e</td></tr>';
+        return;
+    }
+    const items = data.data.deities || [];
+    if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u8d22\u795e\u6570\u636e</td></tr>';
+        return;
+    }
+    var elemColors = {gold:'#FFD700',wood:'#2ecc71',water:'#3498db',fire:'#e74c3c',earth:'#f39c12'};
+    tbody.innerHTML = items.map(d => '<tr>' +
+        '<td>' + d.id + '</td>' +
+        '<td style="color:#FFD700;font-weight:bold">' + (d.name || '-') + '</td>' +
+        '<td>' + (d.title || '-') + '</td>' +
+        '<td><span style="color:' + (elemColors[d.element]||'#aaa') + '">' + (d.element || '-') + '</span></td>' +
+        '<td><span class="badge badge-warning">' + (d.rarity || 'normal') + '</span></td>' +
+        '<td>' + (d.skill_name || '-') + '</td>' +
+        '<td>Lv.' + (d.unlock_level || 1) + '+</td>' +
+        '</tr>').join('');
+}
+
+// --- 故事管理 ---
+async function loadStories() {
+    const data = await apiFetch('/api/stories/');
+    const tbody = document.querySelector('#stories table tbody');
+    if (!tbody) return;
+    if (!data || data.code !== 200) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u6545\u4e8b\u6570\u636e</td></tr>';
+        return;
+    }
+    const items = data.data.stories || [];
+    var countEl = document.querySelector('#stories .stat-card .value');
+    if (countEl) countEl.textContent = items.length;
+    if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u6545\u4e8b\u6570\u636e\uff08\u53ef\u901a\u8fc7\u6279\u91cf\u5bfc\u5165\u6dfb\u52a0\uff09</td></tr>';
+        return;
+    }
+    tbody.innerHTML = items.map(s => '<tr>' +
+        '<td>' + s.id + '</td>' +
+        '<td>' + (s.region_name || s.region || '-') + '</td>' +
+        '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (s.title || s.intro?.substring(0,30) || '-') + '</td>' +
+        '<td>' + (s.tags || '-') + '</td>' +
+        '<td><span class="badge ' + (s.is_active ? 'badge-success' : 'badge-secondary') + '">' + (s.is_active ? '\u542f\u7528' : '\u505c\u7528') + '</span></td>' +
+        '<td>' + (s.created_at ? new Date(s.created_at).toLocaleDateString() : '-') + '</td>' +
+        '</tr>').join('');
+}
+
+// --- 财域管理 ---
+async function loadDomains() {
+    const data = await apiFetch('/api/domains/');
+    const tbody = document.querySelector('#domains table tbody');
+    if (!tbody) return;
+    if (!data || data.code !== 200) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u8d22\u57df\u6570\u636e</td></tr>';
+        return;
+    }
+    const items = data.data.domains || [];
+    var elemIcons = {gold:'\u2728',wood:'\u{1F333}',water:'\u{1F4A7}',fire:'\u{1F525}',earth:'\u{1F30D}'};
+    var elemColors = {gold:'#FFD700',wood:'#2ecc71',water:'#3498db',fire:'#e74c3c',earth:'#f39c12'};
+    tbody.innerHTML = items.map(d => '<tr>' +
+        '<td>' + (d.domain_key || d.id) + '</td>' +
+        '<td style="color:#FFD700;font-weight:bold">' + (d.name || '-') + '</td>' +
+        '<td><span style="color:' + (elemColors[d.element]||'#aaa') + '">' + (elemIcons[d.element]||'') + ' ' + (d.element || '-') + '</span></td>' +
+        '<td>Lv.' + (d.min_level||1) + '-' + (d.max_level||99) + '</td>' +
+        '<td>' + (d.boss_name || '-') + ' (Lv.' + (d.boss_level||'?') + ')</td>' +
+        '<td><span class="badge ' + (d.is_open ? 'badge-success' : 'badge-danger') + '">' + (d.is_open ? '\u5f00\u653e' : '\u5173\u95ed') + '</span></td>' +
+        '<td style="max-width:150px;overflow:hidden;text-overflow:ellipsis">' + (d.description || '-') + '</td>' +
+        '</tr>').join('');
+}
+
+// --- 任务成就管理 ---
+async function loadQuests() {
+    const data = await apiFetch('/api/quests/');
+    const tbody = document.querySelector('#quests table tbody');
+    if (!tbody) return;
+    if (!data || data.code !== 200) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u4efb\u52a1\u6570\u636e</td></tr>';
+        return;
+    }
+    const items = data.data.quests || [];
+    if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u4efb\u52a1\u6570\u636e</td></tr>';
+        return;
+    }
+    var typeColors = {daily:'badge-info',weekly:'badge-primary',main:'badge-warning',side:'badge-success',achievement:'badge-danger'};
+    tbody.innerHTML = items.map(q => '<tr>' +
+        '<td>' + q.id + '</td>' +
+        '<td>' + (q.name || '-') + '</td>' +
+        '<td><span class="badge ' + (typeColors[q.type]||'badge-info') + '">' + (q.type || '-') + '</span></td>' +
+        '<td>' + (q.target_type || '-') + ' x' + (q.target_count || 1) + '</td>' +
+        '<td>' + (q.reward_gold||0) + '\u91d1 / ' + (q.reward_exp||0) + '\u7ecf\u9a8c</td>' +
+        '<td>Lv.' + (q.unlock_level || 1) + '+</td>' +
+        '<td><span class="badge badge-success">\u542f\u7528</span></td>' +
+        '</tr>').join('');
+}
+
+// --- 装修管理 ---
+async function loadDecoration() {
+    const data = await apiFetch('/api/decoration/');
+    const tbody = document.querySelector('#decoration table tbody');
+    if (!tbody) return;
+    if (!data || data.code !== 200) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u88c5\u4fee\u7269\u54c1</td></tr>';
+        return;
+    }
+    const items = data.data.decorations || [];
+    if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u88c5\u4fee\u7269\u54c1</td></tr>';
+        return;
+    }
+    tbody.innerHTML = items.map(d => '<tr>' +
+        '<td>' + d.id + '</td>' +
+        '<td>' + (d.name || '-') + '</td>' +
+        '<td>' + (d.category || '-') + '</td>' +
+        '<td><span class="badge badge-warning">' + (d.rarity || 'normal') + '</span></td>' +
+        '<td>' + (d.price_gold||0) + '\u91d1 / ' + (d.price_yuanbao||0) + '\u5143\u5b9d</td>' +
+        '<td>' + (d.bonus_type||'-') + ' +' + (d.bonus_value||0) + '</td>' +
+        '<td><span class="badge ' + (d.is_limited ? 'badge-danger' : 'badge-success') + '">' + (d.is_limited ? '\u9650\u5b9a' : '\u5e38\u89c4') + '</span></td>' +
+        '</tr>').join('');
+}
+
+// --- 埋点管理 ---
+async function loadAnalytics() {
+    const data = await apiFetch('/api/analytics/summary');
+    const tbody = document.querySelector('#analytics table tbody');
+    if (!tbody) return;
+    // 更新统计卡片
+    var cards = document.querySelectorAll('#analytics .stat-card .value');
+    if (data && data.code === 200 && data.data) {
+        if (cards.length >= 2) {
+            cards[0].textContent = (data.data.total || 0).toLocaleString();
+            cards[1].textContent = (data.data.today || 0).toLocaleString();
+        }
+        var events = data.data.events || [];
+        if (!events.length) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u57cb\u70b9\u6570\u636e</td></tr>';
+            return;
+        }
+        tbody.innerHTML = events.map(e => '<tr>' +
+            '<td>' + (e.event_name || '-') + '</td>' +
+            '<td>' + (e.event_category || '-') + '</td>' +
+            '<td>' + (e.count || 0) + '</td>' +
+            '<td>' + (e.last_time ? new Date(e.last_time).toLocaleString() : '-') + '</td>' +
+            '</tr>').join('');
+    } else {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u57cb\u70b9\u6570\u636e</td></tr>';
+    }
+}
+
+// --- 系统设置 ---
+async function loadSettings() {
+    const data = await apiFetch('/api/settings/');
+    const tbody = document.querySelector('#settings table tbody');
+    if (!tbody) return;
+    if (!data || data.code !== 200) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#888;padding:20px">\u65e0\u6cd5\u52a0\u8f7d\u8bbe\u7f6e</td></tr>';
+        return;
+    }
+    var settings = data.data.settings || [];
+    if (!settings.length) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u8bbe\u7f6e\u9879</td></tr>';
+        return;
+    }
+    tbody.innerHTML = settings.map(s => '<tr>' +
+        '<td style="color:#64c8ff">' + (s.setting_key || '-') + '</td>' +
+        '<td><input type="text" value="' + (s.setting_value || '') + '" data-key="' + s.setting_key + '" style="background:#1a1a2e;color:#eee;border:1px solid #333;padding:4px 8px;border-radius:4px;width:200px" onchange="updateSetting(this)"></td>' +
+        '<td>' + (s.setting_type || 'string') + '</td>' +
+        '<td style="color:#888">' + (s.description || '-') + '</td>' +
+        '</tr>').join('');
+}
+
+async function updateSetting(input) {
+    var key = input.getAttribute('data-key');
+    var val = input.value;
+    var data = await apiFetch('/api/settings/' + key, {
+        method: 'PUT',
+        body: JSON.stringify({ value: val })
+    });
+    if (data && data.code === 200) {
+        showToast('\u2705 ' + key + ' \u5df2\u66f4\u65b0', 'success');
+    } else {
+        showToast('\u274c \u66f4\u65b0\u5931\u8d25', 'error');
+    }
+}
+
+        // ROBOT_MODES 和 badge 映射统一在下方 changeRobotMode 区域定义
+
+        function randomRobotName() {
+            return ROBOT_SURNAMES[Math.floor(Math.random()*ROBOT_SURNAMES.length)] + ROBOT_NAMES[Math.floor(Math.random()*ROBOT_NAMES.length)];
+        }
+
+        function batchCreateRobots() {
+            var names = [];
+            for(var i=0;i<5;i++) names.push(randomRobotName());
+            showGlobalModal("🤖 批量创建机器人",
+                '<div style="margin-bottom:12px"><label style="color:#888">创建数量</label>' +
+                '<select id="robot-count" style="width:100%;padding:8px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px;margin-top:4px">' +
+                '<option value="10">10个</option><option value="50">50个</option><option value="100" selected>100个</option><option value="500">500个</option></select></div>' +
+                '<div style="margin-bottom:12px"><label style="color:#888">等级范围</label>' +
+                '<div style="display:flex;gap:8px;margin-top:4px"><input type="number" id="robot-lvl-min" value="5" min="1" max="99" style="flex:1;padding:8px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px"> ~ ' +
+                '<input type="number" id="robot-lvl-max" value="80" min="1" max="99" style="flex:1;padding:8px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px"></div></div>' +
+                '<div style="margin-bottom:12px"><label style="color:#888">名称预览（随机5个）</label>' +
+                '<div style="margin-top:4px;padding:8px;background:#1a1a2e;border-radius:4px;color:#f5a623">' + names.join('、') + '</div></div>',
+                '<button class="btn" onclick="closeGlobalModal()" style="background:#34495e;margin-right:10px">取消</button>' +
+                '<button class="btn btn-primary" onclick="doCreateRobots()">确认创建</button>'
+            );
+        }
+
+        function doCreateRobots() {
+            var count = parseInt(document.getElementById("robot-count").value);
+            var minLv = parseInt(document.getElementById("robot-lvl-min").value);
+            var maxLv = parseInt(document.getElementById("robot-lvl-max").value);
+            var tbody = document.getElementById("robots-tbody");
+            var startId = tbody.rows.length + 1;
+            for(var i=0;i<Math.min(count,20);i++) {
+                var name = randomRobotName();
+                var lv = Math.floor(Math.random()*(maxLv-minLv+1))+minLv;
+                var modeObj = ROBOT_MODES[Math.floor(Math.random()*5)];
+                var mode = modeObj.name;
+                var badge = modeObj.badge;
+                var online = Math.random()>0.4;
+                var actions = Math.floor(Math.random()*60);
+                var row = tbody.insertRow();
+                row.innerHTML = '<td>'+(startId+i)+'</td><td>'+name+'</td><td>'+lv+'</td>' +
+                    '<td><span class="badge '+badge+'" onclick="changeRobotMode(this)" style="cursor:pointer">'+mode+'</span></td>' +
+                    '<td><span class="badge badge-success">活跃</span></td>' +
+                    '<td><span class="badge '+(online?'badge-success':'badge-danger')+'">'+(online?'在线':'离线')+'</span></td>' +
+                    '<td>'+actions+'</td>' +
+                    '<td><button class="btn btn-sm btn-primary">详情</button> <button class="btn btn-sm" onclick="renameRobot(this)" style="background:#2a3a4a;color:#f5a623">✏️改名</button> <button class="btn btn-sm btn-warning" onclick="toggleRobot(this)">停用</button></td>';
+            }
+            closeGlobalModal();
+            showToast("✅ 已创建 "+count+" 个机器人（预览前20个）","success");
+        }
+
+        
+        // ===== 机器人改名 =====
+        var _renameTarget = null;
+        function renameRobot(btn) {
+            var row = btn.closest("tr");
+            _renameTarget = row.cells[1];
+            var oldName = _renameTarget.textContent;
+            showGlobalModal("\u270f\ufe0f 修改机器人名称",
+                '<div style="margin-bottom:12px"><label style="color:#888">当前名称</label>' +
+                '<div style="padding:8px;background:#1a1a2e;border-radius:4px;color:#f5a623;margin-top:4px">' + oldName + '</div></div>' +
+                '<div style="margin-bottom:12px"><label style="color:#888">新名称</label>' +
+                '<input type="text" id="robot-new-name" value="' + oldName + '" style="width:100%;padding:8px;background:#1a1a2e;color:#eee;border:1px solid #0f3460;border-radius:4px;margin-top:4px;box-sizing:border-box"></div>' +
+                '<div style="margin-bottom:12px"><button class="btn btn-sm" onclick="rollRobotName()" style="background:#2a3a4a;color:#64c8ff">\ud83c\udfb2 随机一个</button></div>',
+                '<button class="btn" onclick="closeGlobalModal()" style="background:#34495e;margin-right:10px">取消</button>' +
+                '<button class="btn btn-primary" onclick="confirmRename()">确认</button>'
+            );
+        }
+        function rollRobotName() {
+            document.getElementById("robot-new-name").value = randomRobotName();
+        }
+        function confirmRename() {
+            var n = document.getElementById("robot-new-name").value;
+            if (n && _renameTarget) {
+                _renameTarget.textContent = n;
+                closeGlobalModal();
+                showToast("\u2705 已改名: " + n, "success");
+            }
+        }
+        // ===== 机器人行为模式切换 =====
+        var ROBOT_MODES = [
+            {name:"\u6d3b\u8dc3\u578b", badge:"badge-info",    desc:"\u9ad8\u9891\u5728\u7ebf\uff0c\u9891\u7e41\u5316\u7f18\u70b9\u9999\uff0c\u6a21\u62df\u6d3b\u8dc3\u73a9\u5bb6"},
+            {name:"\u809d\u5e1d\u578b", badge:"badge-warning",  desc:"\u75af\u72c2\u5237\u8d44\u6e90\u5237\u7b49\u7ea7\uff0c\u6a21\u62df\u91cd\u5ea6\u73a9\u5bb6"},
+            {name:"\u4f11\u95f2\u578b", badge:"badge-success",  desc:"\u4f5b\u7cfb\u6302\u673a\uff0c\u5076\u5c14\u4e0a\u7ebf\uff0c\u6a21\u62df\u8f7b\u5ea6\u73a9\u5bb6"},
+            {name:"\u7ade\u6280\u578b", badge:"badge-danger",   desc:"PVP\u72c2\u70ed\u62a2\u6392\u540d\uff0c\u6a21\u62df\u7ade\u6280\u73a9\u5bb6"},
+            {name:"\u5546\u4eba\u578b", badge:"badge-primary",  desc:"\u6446\u644a\u4ea4\u6613\u56e4\u8d27\u5012\u5356\uff0c\u6a21\u62df\u5546\u4eba\u73a9\u5bb6"},
+            {name:"\u793e\u4ea4\u578b", badge:"badge-secondary", desc:"\u9891\u7e41\u52a0\u597d\u53cb\u3001\u4e92\u52a8\u3001\u4e91\u6e38\uff0c\u6a21\u62df\u793e\u4ea4\u8fbe\u4eba"},
+            {name:"\u6316\u5b9d\u578b", badge:"badge-info",     desc:"\u4e13\u6ce8\u63a2\u7d22\u8d22\u57df\u6316\u5b9d\uff0c\u6a21\u62df\u63a2\u7d22\u578b\u73a9\u5bb6"}
+        ];
+        function changeRobotMode(badge) {
+            var row = badge.closest("tr");
+            var name = row.cells[1].textContent;
+            var current = badge.textContent.trim();
+            var items = "";
+            for (var i = 0; i < ROBOT_MODES.length; i++) {
+                var m = ROBOT_MODES[i];
+                var sel = (m.name === current) ? "border:2px solid #FFD700;background:#1a2a3e" : "border:1px solid #333;background:#0f1a2e";
+                items += '<div onclick="applyRobotMode(this,' + i + ')" style="padding:10px;border-radius:8px;margin-bottom:8px;cursor:pointer;' + sel + '">' +
+                    '<span class="badge ' + m.badge + '" style="margin-right:8px">' + m.name + '</span>' +
+                    '<span style="color:#aaa;font-size:12px">' + m.desc + '</span>' +
+                    (m.name === current ? ' <span style="color:#FFD700;float:right">\u2714</span>' : '') +
+                    '</div>';
+            }
+            showGlobalModal("\u2699\ufe0f " + name + " - \u884c\u4e3a\u6a21\u5f0f", items, "");
+            window._modeBadge = badge;
+        }
+        function applyRobotMode(el, idx) {
+            var m = ROBOT_MODES[idx];
+            var b = window._modeBadge;
+            if (b) {
+                b.className = "badge " + m.badge;
+                b.textContent = m.name;
+                b.setAttribute("onclick", "changeRobotMode(this)");
+                b.style.cursor = "pointer";
+            }
+            closeGlobalModal();
+            var row = b ? b.closest("tr") : null;
+            var rname = row ? row.cells[1].textContent : "";
+            showToast("\u2705 " + rname + " \u5df2\u5207\u6362\u4e3a " + m.name, "success");
+        }
+        // ===== 机器人停用/启用切换 =====
+        function toggleRobot(btn) {
+            var row = btn.closest("tr");
+            var name = row.cells[1].textContent;
+            var stateCell = row.cells[4];
+            var onlineCell = row.cells[5];
+            if (btn.textContent.trim() === "\u505c\u7528") {
+                stateCell.innerHTML = '<span class="badge" style="background:#666">\u5df2\u505c\u7528</span>';
+                onlineCell.innerHTML = '<span class="badge badge-danger">\u79bb\u7ebf</span>';
+                btn.textContent = "\u542f\u7528";
+                btn.className = "btn btn-sm btn-success";
+                showToast("\u23f8\ufe0f " + name + " \u5df2\u505c\u7528\uff08\u73a9\u5bb6\u4ecd\u53ef\u89c1\uff0c\u663e\u793a\u79bb\u7ebf\uff09", "warning");
+            } else {
+                stateCell.innerHTML = '<span class="badge badge-success">\u6d3b\u8dc3</span>';
+                onlineCell.innerHTML = '<span class="badge badge-success">\u5728\u7ebf</span>';
+                btn.textContent = "\u505c\u7528";
+                btn.className = "btn btn-sm btn-warning";
+                showToast("\u25b6\ufe0f " + name + " \u5df2\u91cd\u65b0\u542f\u7528", "success");
+            }
+        }
+
+        </script>
+<script src="admin-functions.js"></script>
+</body>
+</html>
