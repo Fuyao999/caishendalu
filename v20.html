@@ -13025,6 +13025,10 @@ const mockLeaderboard = [
     { name: '你', level: gameData.level, money: gameData.money, merit: gameData.merit, reputation: gameData.reputation, faith: gameData.faith, isSelf: true }
 ];
 
+// 排行榜排序状态
+let leaderboardSortKey = 'merit'; // 默认按功德
+let leaderboardSortAsc = false; // 降序
+
 function renderLeaderboard() {
     // 更新自己的数据
     const selfIndex = mockLeaderboard.findIndex(p => p.isSelf);
@@ -13034,12 +13038,18 @@ function renderLeaderboard() {
             level: gameData.level,
             money: gameData.money,
             merit: gameData.merit,
+            reputation: gameData.reputation,
+            faith: gameData.faith,
             isSelf: true
         };
     }
     
-    // 按功德排序
-    const sorted = [...mockLeaderboard].sort((a, b) => b.merit - a.merit);
+    // 排序
+    const sorted = [...mockLeaderboard].sort((a, b) => {
+        let va = a[leaderboardSortKey] || 0;
+        let vb = b[leaderboardSortKey] || 0;
+        return leaderboardSortAsc ? va - vb : vb - va;
+    });
     
     // 找到自己的排名
     const myRank = sorted.findIndex(p => p.isSelf) + 1;
@@ -13054,11 +13064,11 @@ function renderLeaderboard() {
             <div style="display: flex; background: rgba(255,255,255,0.1); padding: 8px; border-radius: 5px; margin-bottom: 5px; font-size: 11px; color: #888;">
                 <div style="width: 35px;">排名</div>
                 <div style="flex: 1;">玩家</div>
-                <div style="width: 30px; text-align: center;">级</div>
-                <div style="width: 60px; text-align: right;">香火钱</div>
-                <div style="width: 40px; text-align: right;">功德</div>
-                <div style="width: 40px; text-align: right;">声望</div>
-                <div style="width: 40px; text-align: right;">善缘</div>
+                <div style="width: 30px; text-align: center; cursor:pointer" onclick="sortLeaderboard('level')">级${leaderboardSortKey==='level'?'▼':''}</div>
+                <div style="width: 60px; text-align: right; cursor:pointer" onclick="sortLeaderboard('money')">香火钱${leaderboardSortKey==='money'?'▼':''}</div>
+                <div style="width: 40px; text-align: right; cursor:pointer" onclick="sortLeaderboard('merit')">功德${leaderboardSortKey==='merit'?'▼':''}</div>
+                <div style="width: 40px; text-align: right; cursor:pointer" onclick="sortLeaderboard('reputation')">声望${leaderboardSortKey==='reputation'?'▼':''}</div>
+                <div style="width: 40px; text-align: right; cursor:pointer" onclick="sortLeaderboard('faith')">善缘${leaderboardSortKey==='faith'?'▼':''}</div>
             </div>
     `;
     
@@ -13083,6 +13093,17 @@ function renderLeaderboard() {
     
     const container = document.getElementById('leaderboard-container');
     if (container) container.innerHTML = html;
+}
+
+// 排行榜排序函数
+function sortLeaderboard(key) {
+    if (leaderboardSortKey === key) {
+        leaderboardSortAsc = !leaderboardSortAsc; // 同一列则切换升/降序
+    } else {
+        leaderboardSortKey = key;
+        leaderboardSortAsc = false; // 新列默认降序
+    }
+    renderLeaderboard();
 }
 
 // ==================== 数据统计系统 ====================
@@ -13694,9 +13715,9 @@ initInvSR();
             gameData.money = Math.max(0, (gameData.money || 0) + goldChange);
             saveGame();
             
-            // 弹出结果
+            // 弹出结果（用游戏弹窗）
             const emoji = isSuccess ? '🎊' : '😓';
-            alert(`${emoji} ${result}\n\n访问了${npcName}的${npcLevel}级庙宇\n${goldChange >= 0 ? '获得' : '损失'} ${Math.abs(goldChange)} 香火钱\n\n今日剩余: ${10 - rd.stealCount}次`);
+            showModal(`${emoji} ${result}`, `访问了${npcName}的${npcLevel}级庙宇<br>${goldChange >= 0 ? '获得' : '损失'} ${Math.abs(goldChange)} 香火钱<br><br>今日剩余: ${10 - rd.stealCount}次`);
             
             refreshRoamList();
             updateUI();
@@ -14170,6 +14191,7 @@ async function doGameLogin() {
         // 【重要】不调用loadGame，直接使用服务器数据
         init();
         updatePlayerIdDisplay(); // 确保玩家ID显示
+        updateUI(); // 更新UI（包括升级按钮状态）
         startApiSync();
         if (!getPlayerName()) showNamingDialog(true);
         V19_API.track('login', { method: 'password' });
