@@ -43,7 +43,7 @@ router.post('/sync-data', authMiddleware, async (req, res, next) => {
       inv, sr, task_claimed, area_first_visit, area_visited, player_name,
       incense_type, incense_end_at, shield_end_at, be_alms_count,
       read_announcements, mails,
-      temple_storage
+      temple_storage, opened_heaven
     } = req.body;
     const realm = getRealm(level || 1);
 
@@ -67,7 +67,7 @@ router.post('/sync-data', authMiddleware, async (req, res, next) => {
         incense_type=?, incense_end_at=?, shield_end_at=?, be_alms_count=?,
         read_announcements=?, mails=?,
         realm=?, realm_name=?, last_update_time=?,
-        temple_storage=?
+        temple_storage=?, opened_heaven=?
        WHERE user_id=?`,
       [
         gold||0, level||1, yuanbao||0, merit||0, manaToSave, fragments||0, banners||0, faith||0, reputation||0,
@@ -79,7 +79,7 @@ router.post('/sync-data', authMiddleware, async (req, res, next) => {
         incense_type||null, incense_end_at||null, shield_end_at||null, be_alms_count||0,
         read_announcements||null, mails||null,
         realm.level, realm.name, Date.now(),
-        temple_storage||0,
+        temple_storage||0, opened_heaven||0,
         req.user.userId
       ]
     );

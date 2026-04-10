@@ -567,6 +567,7 @@ const gameData = {
     firstWorshipDone: false, hasGreatLuck: false,
     lastLoginTime: null, loginDays: 1, consecutiveDays: 1, todayLogin: false, lastLoginDate: null,
     shengxiao: null, shengxiaoBonus: false,
+    openedHeaven: false, // 天门是否已开启
     beAlmsCount: 0, shieldActive: false, shieldEndTime: null,
     bushuSmall: 0, bushuMedium: 0, bushuLarge: 0,
     visitCount: 0, // 每日拜访好友次数
@@ -11393,12 +11394,16 @@ function doUpgrade() {
 
 function openHeavenGate() {
     if (gameData.level < 5) return;
+    if (gameData.openedHeaven) { log('upgrade-log', '❌ 天门已开启过'); return; }
     const others = gods.filter(g=>g.id!=='zhaogongming');
     if (!others.every(g=>g.unlocked)) { log('upgrade-log', '❌ 还有财神未解锁'); return; }
     if (gameData.money < 500000) { log('upgrade-log', '❌ 香火钱不足50万'); return; }
     
     // 扣除50万请赵公明
     gameData.money -= 500000;
+    
+    // 标记天门已开启（不可重复）
+    gameData.openedHeaven = true;
     
     // 解锁赵公明
     const zhaogongming = gods.find(g=>g.id==='zhaogongming');
@@ -11419,6 +11424,9 @@ function openHeavenGate() {
     log('upgrade-log', '🎊 开天门，迎财神！赵公明降临！庙宇升至6级！进入12财域！');
     renderGods();
     updateUI();
+    saveGame();
+    // 立即同步到服务器
+    V19_API.syncData(gameData).catch(function(){});
 }
 
 function checkUnlocks() {
@@ -11929,12 +11937,25 @@ function updateUI() {
     const btnUpgradeEl = document.getElementById('btn-upgrade');
     const btnTianmenEl = document.getElementById('btn-tianmen');
     const upgradeInfoEl = document.getElementById('upgrade-info');
+    console.log('updateUI - level:', gameData.level, 'openedHeaven:', gameData.openedHeaven, 'btnUpgradeEl:', btnUpgradeEl, 'btnTianmenEl:', btnTianmenEl);
     
-    if (gameData.level >= 5) {
+    if (gameData.level >= 5 && !gameData.openedHeaven) {
         if (btnUpgradeEl) btnUpgradeEl.classList.add('hidden');
         if (btnTianmenEl) btnTianmenEl.classList.remove('hidden');
         if (upgradeInfoEl) upgradeInfoEl.innerHTML = '已达5级金身！<br>集齐8位财神 + 50万香火钱<br>可开启天门迎财神';
+    } else if (gameData.level >= 5 && gameData.openedHeaven) {
+        // 6级用户，天门已开
+        if (btnUpgradeEl) btnUpgradeEl.classList.add('hidden');
+        if (btnTianmenEl) btnTianmenEl.classList.add('hidden');
+        if (upgradeInfoEl) upgradeInfoEl.innerHTML = '🌟 天门已开，财神降临！<br>庙宇升至6级！';
     } else {
+        // 1-4级：显示升级按钮，隐藏开天门按钮
+        console.log('updateUI - ELSE branch: showing upgrade button, hiding tianmen');
+        if (btnUpgradeEl) { btnUpgradeEl.classList.remove('hidden'); console.log('btnUpgradeEl hidden removed'); }
+        else console.log('btnUpgradeEl NOT FOUND');
+        if (btnTianmenEl) { btnTianmenEl.classList.add('hidden'); console.log('btnTianmenEl hidden added'); }
+        else console.log('btnTianmenEl NOT FOUND');
+        
         const need = upgradeNeeds[gameData.level];
         const currentMoney = gameData.money;
         const currentBanners = gameData.banners;
@@ -13081,10 +13102,10 @@ function renderLeaderboard() {
                 <div style="width: 35px; font-weight: bold; color: ${index < 3 ? '#FFD700' : '#888'};">${rankIcon}</div>
                 <div style="flex: 1; color: ${player.isSelf ? '#FFD700' : '#fff'}; font-weight: ${player.isSelf ? 'bold' : 'normal'};">${player.name}</div>
                 <div style="width: 30px; text-align: center; color: #aaa;">${player.level}</div>
-                <div style="width: 60px; text-align: right; color: #2ecc71;">${player.money >= 10000 ? (player.money/1000).toFixed(0)+'k' : player.money}</div>
-                <div style="width: 40px; text-align: right; color: #FFD700;">${player.merit >= 1000 ? (player.merit/1000).toFixed(0)+'k' : player.merit}</div>
-                <div style="width: 40px; text-align: right; color: #64c8ff;">${player.reputation >= 1000 ? (player.reputation/1000).toFixed(0)+'k' : player.reputation}</div>
-                <div style="width: 40px; text-align: right; color: #fd79a8;">${player.faith >= 1000 ? (player.faith/1000).toFixed(0)+'k' : player.faith}</div>
+                <div style="width: 60px; text-align: right; color: #2ecc71;">${player.money >= 10000 ? Math.floor(player.money/1000)+'k' : Math.floor(player.money)}</div>
+                <div style="width: 40px; text-align: right; color: #FFD700;">${player.merit >= 1000 ? Math.floor(player.merit/1000)+'k' : Math.floor(player.merit)}</div>
+                <div style="width: 40px; text-align: right; color: #64c8ff;">${player.reputation >= 1000 ? Math.floor(player.reputation/1000)+'k' : Math.floor(player.reputation)}</div>
+                <div style="width: 40px; text-align: right; color: #fd79a8;">${player.faith >= 1000 ? Math.floor(player.faith/1000)+'k' : Math.floor(player.faith)}</div>
             </div>
         `;
     });
@@ -13288,6 +13309,7 @@ function showTutorial() {
             if (d.faith !== undefined) gameData.faith = d.faith;
             if (d.reputation !== undefined) gameData.reputation = d.reputation;
             if (d.temple_storage !== undefined) gameData.templeStorage = d.temple_storage;
+            if (d.opened_heaven !== undefined) gameData.openedHeaven = d.opened_heaven == 1;
             if (d.gold_paper !== undefined) gameData.gold_paper = d.gold_paper;
             if (d.fruits !== undefined) gameData.fruits = d.fruits;
             if (d.incense_sticks !== undefined) gameData.incense_sticks = d.incense_sticks;
@@ -14010,7 +14032,8 @@ var V19_API = {
                 be_alms_count: gd.beAlmsCount || 0,
                 read_announcements: gd.readAnnouncements ? JSON.stringify(gd.readAnnouncements) : null,
                 mails: gd.mails ? JSON.stringify(gd.mails) : null,
-                temple_storage: gd.templeStorage || 0
+                temple_storage: gd.templeStorage || 0,
+                opened_heaven: gd.openedHeaven ? 1 : 0
             })
         });
     },
@@ -14106,6 +14129,7 @@ async function doGameLogin() {
             if (d.faith !== undefined) gameData.faith = d.faith;
             if (d.reputation !== undefined) gameData.reputation = d.reputation;
             if (d.temple_storage !== undefined) gameData.templeStorage = d.temple_storage;
+            if (d.opened_heaven !== undefined) gameData.openedHeaven = d.opened_heaven == 1;
             if (d.gold_paper !== undefined) gameData.gold_paper = d.gold_paper;
             if (d.fruits !== undefined) gameData.fruits = d.fruits;
             if (d.incense_sticks !== undefined) gameData.incense_sticks = d.incense_sticks;
@@ -14189,6 +14213,8 @@ async function doGameLogin() {
         // 保存到本地并同步到服务器
         saveGame();
         // 【重要】不调用loadGame，直接使用服务器数据
+        // 清除旧的日志显示
+        document.getElementById('upgrade-log').innerHTML = '';
         init();
         updatePlayerIdDisplay(); // 确保玩家ID显示
         updateUI(); // 更新UI（包括升级按钮状态）
@@ -14235,7 +14261,10 @@ async function doGameRegister() {
             }
             updatePlayerNameDisplay();
             updatePlayerIdDisplay();
+            // 清除旧的日志显示
+            document.getElementById('upgrade-log').innerHTML = '';
             init();
+            updateUI(); // 更新UI（包括升级按钮状态）
             startApiSync();
             V19_API.track('register', { method: 'password' });
         }
