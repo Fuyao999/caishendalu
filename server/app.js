@@ -49,7 +49,11 @@ app.use(helmet({
   contentSecurityPolicy: false,  // V19和管理后台都是内联JS，需要关闭CSP
   crossOriginEmbedderPolicy: false
 }));
-app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN || 'http://localhost:8080',
+  credentials: true
+};
+app.use(cors(corsOptions));
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));

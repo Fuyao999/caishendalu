@@ -41,9 +41,21 @@ router.post('/sync-data', authMiddleware, async (req, res, next) => {
       daily_alms, daily_sign, sign_streak, total_sign, alms_miss_streak, alms_today,
       tutorial_completed, today_login, announcement_shown, last_login_date, shengxiao,
       inv, sr, task_claimed, area_first_visit, area_visited, player_name,
-      incense_type, incense_end_at, shield_end_at, be_alms_count
+      incense_type, incense_end_at, shield_end_at, be_alms_count,
+      read_announcements, mails,
+      temple_storage
     } = req.body;
     const realm = getRealm(level || 1);
+
+    // 计算离线法力恢复（10点/小时）
+    const [oldRows] = await pool.query('SELECT last_update_time, mana FROM player_data WHERE user_id=?', [req.user.userId]);
+    let manaToSave = mana || 0;
+    if (oldRows.length > 0 && oldRows[0].last_update_time) {
+      const elapsed = Date.now() - oldRows[0].last_update_time;
+      const manaRecovered = Math.floor(elapsed * 10 / 3600000);
+      manaToSave = Math.min(100, (manaToSave || 0) + manaRecovered);
+    }
+
     await pool.query(
       `UPDATE player_data SET
         gold=?, level=?, yuanbao=?, merit=?, mana=?, fragments=?, banners=?, faith=?, reputation=?,
@@ -53,17 +65,21 @@ router.post('/sync-data', authMiddleware, async (req, res, next) => {
         tutorial_completed=?, today_login=?, announcement_shown=?, last_login_date=?, shengxiao=?,
         inv=?, sr=?, task_claimed=?, area_first_visit=?, area_visited=?, player_name=?,
         incense_type=?, incense_end_at=?, shield_end_at=?, be_alms_count=?,
-        realm=?, realm_name=?
+        read_announcements=?, mails=?,
+        realm=?, realm_name=?, last_update_time=?,
+        temple_storage=?
        WHERE user_id=?`,
       [
-        gold||0, level||1, yuanbao||0, merit||0, mana||0, fragments||0, banners||0, faith||0, reputation||0,
+        gold||0, level||1, yuanbao||0, merit||0, manaToSave, fragments||0, banners||0, faith||0, reputation||0,
         gold_paper||0, fruits||0, incense_sticks||0, candles||0,
         alms_count||0, great_count||0, worship_count||0, bushushort_small||0, bushushort_medium||0, bushushort_large||0,
         daily_alms||20, daily_sign||0, sign_streak||0, total_sign||0, alms_miss_streak||0, alms_today||0,
         tutorial_completed||0, today_login||0, announcement_shown||0, last_login_date||null, shengxiao||null,
         inv||null, sr||null, task_claimed||null, area_first_visit||null, area_visited||null, player_name||null,
         incense_type||null, incense_end_at||null, shield_end_at||null, be_alms_count||0,
-        realm.level, realm.name,
+        read_announcements||null, mails||null,
+        realm.level, realm.name, Date.now(),
+        temple_storage||0,
         req.user.userId
       ]
     );

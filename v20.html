@@ -674,11 +674,6 @@ function init() {
         console.log('新用户，初始化默认数据');
         gameData.incense_sticks = 3;
         gameData.candles = 1;
-        // // // gameData.money = 2400; // 禁用，使用服务器值 // 禁用，使用服务器值 // 禁用重置
-        gameData.mana = 100;
-        gameData.fragments = 0;
-        gameData.banners = 0;
-        gameData.merit = 0;
         gameData.mana = 100;
         gameData.fragments = 0;
         gameData.banners = 0;
@@ -694,8 +689,8 @@ function init() {
         gameData.bushuLarge = 0;
         gameData.gold_paper = 0;
         gameData.fruits = 0;
-        // // gameData.level = 1; // 禁用，使用服务器值 // 禁用，使用服务器值
     }
+    // // gameData.level = 1; // 禁用，使用服务器值
     
     // 生成邀请码（如果没有）
     if (!gameData.invitationCode) {
@@ -726,8 +721,6 @@ function init() {
     
     // 加载设置
     loadSettings();
-    
-    console.log('初始化完成:', gameData);
 }
 
 function loadGame() {
@@ -756,7 +749,7 @@ function saveGame() {
 }
 
 function checkFirstLogin() {
-    const today = new Date().toDateString();
+    const today = new Date().toISOString().split('T')[0];
     if (gameData.lastLoginDate !== today) {
         const lastDate = gameData.lastLoginDate ? new Date(gameData.lastLoginDate) : null;
         if (lastDate) {
@@ -934,8 +927,8 @@ function updateTempleOutput() {
     // 信徒贡献（善缘）从产出计算
     gameData.faith += (temple.output / 86400 * elapsed) / 100;
     
-    // 法力恢复
-    if (gameData.mana < 100) gameData.mana = Math.min(100, gameData.mana + 10 * (elapsed / 10));
+    // 法力恢复：10点/小时，只要<100就开始恢复
+    if (gameData.mana < 100) gameData.mana = Math.min(100, gameData.mana + elapsed * 10 / 3600);
     
     gameData.lastUpdateTime = now;
 }
@@ -1067,7 +1060,7 @@ function renewIncense(type) {
             method: 'POST',
             body: JSON.stringify({
                 incense_type: gameData.currentIncense.type,
-                incense_end_at: new Date(gameData.currentIncense.endTime).toISOString()
+                incense_end_at: gameData.currentIncense.endTime
             })
         }).catch(function(){});
     }
@@ -10874,6 +10867,11 @@ function v19Click(areaId) {
 function v19Choose(choice) {
     document.getElementById('v19-evt').style.display = 'none';
     var area = _v19area; if (!area) return;
+    // 检查法力值是否足够（每次化缘消耗5点）
+    if ((gameData.mana || 0) < 5) {
+        log('alms-log', '❌ 法力值不足！需要5点法力值');
+        return;
+    }
     var outcome, profit;
     if (area.type === '2r') {
         outcome = Math.random() < 0.45 ? 'W2' : 'L2';
@@ -10886,6 +10884,7 @@ function v19Choose(choice) {
         profit = Math.floor(area.threshold * mult);
     }
     gameData.money = Math.max(0, (gameData.money || 0) + profit);
+    gameData.mana = Math.max(0, (gameData.mana || 0) - 5); // 扣除5点法力值
     gameData.almsCount = (gameData.almsCount || 0) + 1;
     gameData.almsToday = (gameData.almsToday || 0) + 1;
     gameData.merit = (gameData.merit || 0) + 5;
@@ -11940,6 +11939,11 @@ function updateUI() {
         const currentMoney = gameData.money;
         const currentBanners = gameData.banners;
         const currentMerit = gameData.merit;
+        // 获取下一级的庙宇产出信息
+        const nextLevel = gameData.level + 1;
+        const nextTemple = templeData[nextLevel];
+        const currentTemple = templeData[gameData.level];
+        const outputInfo = nextTemple ? `<br>🏛️ 升级后庙宇产出: ${nextTemple.output}/天（当前${currentTemple.output}/天）` : '';
         if (upgradeInfoEl) {
             upgradeInfoEl.innerHTML = 
                 `<div style="line-height:1.8;">` +
@@ -11947,6 +11951,7 @@ function updateUI() {
                 `💰 香火钱: ${currentMoney}/${need.money} ${currentMoney>=need.money?'✅':'❌'}<br>` +
                 `🎏 招财幡: ${currentBanners}/${need.banners} ${currentBanners>=need.banners?'✅':'❌'}<br>` +
                 `⭐ 功德门槛: ${currentMerit}/${need.merit} ${currentMerit>=need.merit?'✅':'❌'}` +
+                outputInfo +
                 `</div>`;
         }
     }
@@ -13012,12 +13017,12 @@ function loadSettings() {
 
 // 模拟排行榜数据（实际应该从服务器获取）
 const mockLeaderboard = [
-    { name: '财神爷本尊', level: 6, money: 999999, merit: 8888 },
-    { name: '招财进宝', level: 5, money: 500000, merit: 5000 },
-    { name: '富贵逼人', level: 5, money: 350000, merit: 4200 },
-    { name: '金玉满堂', level: 4, money: 200000, merit: 3000 },
-    { name: '财源广进', level: 4, money: 150000, merit: 2500 },
-    { name: '你', level: gameData.level, money: gameData.money, merit: gameData.merit, isSelf: true }
+    { name: '财神爷本尊', level: 6, money: 999999, merit: 8888, reputation: 5000, faith: 2000 },
+    { name: '招财进宝', level: 5, money: 500000, merit: 5000, reputation: 3000, faith: 1500 },
+    { name: '富贵逼人', level: 5, money: 350000, merit: 4200, reputation: 2500, faith: 1200 },
+    { name: '金玉满堂', level: 4, money: 200000, merit: 3000, reputation: 1800, faith: 900 },
+    { name: '财源广进', level: 4, money: 150000, merit: 2500, reputation: 1200, faith: 600 },
+    { name: '你', level: gameData.level, money: gameData.money, merit: gameData.merit, reputation: gameData.reputation, faith: gameData.faith, isSelf: true }
 ];
 
 function renderLeaderboard() {
@@ -13047,10 +13052,13 @@ function renderLeaderboard() {
             </div>
             
             <div style="display: flex; background: rgba(255,255,255,0.1); padding: 8px; border-radius: 5px; margin-bottom: 5px; font-size: 11px; color: #888;">
-                <div style="width: 40px;">排名</div>
+                <div style="width: 35px;">排名</div>
                 <div style="flex: 1;">玩家</div>
-                <div style="width: 50px; text-align: center;">等级</div>
-                <div style="width: 80px; text-align: right;">功德</div>
+                <div style="width: 30px; text-align: center;">级</div>
+                <div style="width: 60px; text-align: right;">香火钱</div>
+                <div style="width: 40px; text-align: right;">功德</div>
+                <div style="width: 40px; text-align: right;">声望</div>
+                <div style="width: 40px; text-align: right;">善缘</div>
             </div>
     `;
     
@@ -13060,10 +13068,13 @@ function renderLeaderboard() {
         
         html += `
             <div style="display: flex; padding: 10px 8px; border-radius: 5px; margin: 3px 0; ${bgStyle} font-size: 12px; align-items: center;">
-                <div style="width: 40px; font-weight: bold; color: ${index < 3 ? '#FFD700' : '#888'};">${rankIcon}</div>
+                <div style="width: 35px; font-weight: bold; color: ${index < 3 ? '#FFD700' : '#888'};">${rankIcon}</div>
                 <div style="flex: 1; color: ${player.isSelf ? '#FFD700' : '#fff'}; font-weight: ${player.isSelf ? 'bold' : 'normal'};">${player.name}</div>
-                <div style="width: 50px; text-align: center; color: #aaa;">Lv.${player.level}</div>
-                <div style="width: 80px; text-align: right; color: #FFD700;">${player.merit.toLocaleString()}</div>
+                <div style="width: 30px; text-align: center; color: #aaa;">${player.level}</div>
+                <div style="width: 60px; text-align: right; color: #2ecc71;">${player.money >= 10000 ? (player.money/1000).toFixed(0)+'k' : player.money}</div>
+                <div style="width: 40px; text-align: right; color: #FFD700;">${player.merit >= 1000 ? (player.merit/1000).toFixed(0)+'k' : player.merit}</div>
+                <div style="width: 40px; text-align: right; color: #64c8ff;">${player.reputation >= 1000 ? (player.reputation/1000).toFixed(0)+'k' : player.reputation}</div>
+                <div style="width: 40px; text-align: right; color: #fd79a8;">${player.faith >= 1000 ? (player.faith/1000).toFixed(0)+'k' : player.faith}</div>
             </div>
         `;
     });
@@ -13255,6 +13266,7 @@ function showTutorial() {
             if (d.banners !== undefined) gameData.banners = d.banners;
             if (d.faith !== undefined) gameData.faith = d.faith;
             if (d.reputation !== undefined) gameData.reputation = d.reputation;
+            if (d.temple_storage !== undefined) gameData.templeStorage = d.temple_storage;
             if (d.gold_paper !== undefined) gameData.gold_paper = d.gold_paper;
             if (d.fruits !== undefined) gameData.fruits = d.fruits;
             if (d.incense_sticks !== undefined) gameData.incense_sticks = d.incense_sticks;
@@ -13299,7 +13311,7 @@ function showTutorial() {
                 var shieldEnd = new Date(d.shield_end_at).getTime();
                 if (shieldEnd > Date.now()) gameData.shieldEndTime = shieldEnd;
             }
-            // 香火状态
+            // 香火状态（MySQL存UTC时间，解析时加8小时补偿时区差）
             if (d.incense_type && d.incense_end_at) {
                 var incEnd = new Date(d.incense_end_at).getTime();
                 if (incEnd > Date.now()) {
@@ -13308,24 +13320,10 @@ function showTutorial() {
             }
             console.log('服务器数据已同步到本地:', gameData);
         }
-        // 保存到本地（不立即同步到服务器，避免覆盖）
-        localStorage.setItem('caishen_v19', JSON.stringify(gameData));
-        // 【重要】不调用loadGame，直接使用服务器数据
+        // 直接用服务器数据初始化
         init();
-        // 延迟10秒启动同步，确保数据已加载
-        setTimeout(startApiSync, 10000);
-        // 从服务器恢复香火状态
-        if (pd && pd.data && pd.data.incense_type && pd.data.incense_end_at) {
-            var incEnd = new Date(pd.data.incense_end_at).getTime();
-            if (incEnd > Date.now()) {
-                gameData.currentIncense = {
-                    type: pd.data.incense_type,
-                    endTime: incEnd
-                };
-                saveGame();
-                console.log('从服务器恢复香火状态:', pd.data.incense_type);
-            }
-        }
+        // 立即启动定时同步
+        startApiSync();
         if (!getPlayerName()) showNamingDialog(true);
     } else {
         // 未登录，显示登录界面，登录后再初始化
@@ -13680,7 +13678,7 @@ initInvSR();
                 goldChange = Math.floor(baseGold * ratio);
                 result = '🎉 化缘成功！';
             } else {
-                // 失败：被发现，损失少量金币
+                // 失败：被发现，损失少量香火钱
                 goldChange = -Math.floor(baseGold * 0.05);
                 result = '😅 被发现了！';
             }
@@ -13688,17 +13686,17 @@ initInvSR();
             // 更新数据
             rd.visited.push(npcName);
             rd.stealCount++;
-            const logEntry = `${result} ${npcName}的庙 ${goldChange >= 0 ? '+' : ''}${goldChange}金币`;
+            const logEntry = `${result} ${npcName}的庙 ${goldChange >= 0 ? '+' : ''}${goldChange}香火钱`;
             rd.log.unshift(logEntry);
             saveRoamData(rd);
             
-            // 更新游戏金币
+            // 更新游戏香火钱
             gameData.money = Math.max(0, (gameData.money || 0) + goldChange);
             saveGame();
             
             // 弹出结果
             const emoji = isSuccess ? '🎊' : '😓';
-            alert(`${emoji} ${result}\n\n访问了${npcName}的${npcLevel}级庙宇\n${goldChange >= 0 ? '获得' : '损失'} ${Math.abs(goldChange)} 金币\n\n今日剩余: ${10 - rd.stealCount}次`);
+            alert(`${emoji} ${result}\n\n访问了${npcName}的${npcLevel}级庙宇\n${goldChange >= 0 ? '获得' : '损失'} ${Math.abs(goldChange)} 香火钱\n\n今日剩余: ${10 - rd.stealCount}次`);
             
             refreshRoamList();
             updateUI();
@@ -13986,9 +13984,12 @@ var V19_API = {
                 area_visited: gd.areaVisited ? JSON.stringify(gd.areaVisited) : null,
                 player_name: gd.playerName || null,
                 incense_type: gd.currentIncense ? gd.currentIncense.type : null,
-                incense_end_at: gd.currentIncense ? new Date(gd.currentIncense.endTime).toISOString() : null,
-                shield_end_at: gd.shieldEndTime ? new Date(gd.shieldEndTime).toISOString() : null,
-                be_alms_count: gd.beAlmsCount || 0
+                incense_end_at: gd.currentIncense ? gd.currentIncense.endTime : null,
+                shield_end_at: gd.shieldEndTime ? gd.shieldEndTime : null,
+                be_alms_count: gd.beAlmsCount || 0,
+                read_announcements: gd.readAnnouncements ? JSON.stringify(gd.readAnnouncements) : null,
+                mails: gd.mails ? JSON.stringify(gd.mails) : null,
+                temple_storage: gd.templeStorage || 0
             })
         });
     },
@@ -14060,12 +14061,18 @@ async function doGameLogin() {
     btn.textContent = '\u8fdb\u5165\u8d22\u795e\u5927\u9646'; btn.disabled = false;
     if (result.success) {
         hideGameLogin();
-        // 清除本地缓存的playerId，强制使用服务器的
-        delete gameData.playerId;
-        loadGame();
-        // 从API加载玩家数据
+        // 清除本地缓存，强制使用服务器的
+        localStorage.removeItem('caishen_v19');
+        // 重置gameData到初始状态，避免旧数据残留
+        Object.keys(gameData).forEach(function(k) { delete gameData[k]; });
+        Object.assign(gameData, JSON.parse(GAME_DATA_DEFAULTS));
+        // 从API加载玩家数据（优先用服务器数据）
         var pd = await V19_API.getPlayerData();
+        console.log('getPlayerData返回:', pd);
         if (pd && pd.code === 200 && pd.data) {
+            // 服务器数据加载成功，覆盖本地缓存
+            console.log('从服务器加载数据:', pd.data);
+            console.log('设置money:', pd.data.gold, 'level:', pd.data.level, 'reputation:', pd.data.reputation);
             var d = pd.data;
             // 基础资源
             if (d.gold !== undefined) gameData.money = d.gold;
@@ -14077,6 +14084,7 @@ async function doGameLogin() {
             if (d.banners !== undefined) gameData.banners = d.banners;
             if (d.faith !== undefined) gameData.faith = d.faith;
             if (d.reputation !== undefined) gameData.reputation = d.reputation;
+            if (d.temple_storage !== undefined) gameData.templeStorage = d.temple_storage;
             if (d.gold_paper !== undefined) gameData.gold_paper = d.gold_paper;
             if (d.fruits !== undefined) gameData.fruits = d.fruits;
             if (d.incense_sticks !== undefined) gameData.incense_sticks = d.incense_sticks;
@@ -14121,16 +14129,16 @@ async function doGameLogin() {
                 var shieldEnd = new Date(d.shield_end_at).getTime();
                 if (shieldEnd > Date.now()) gameData.shieldEndTime = shieldEnd;
             }
-            // 香火状态
+            // 香火状态（MySQL存UTC时间，解析时加8小时补偿时区差）
             if (d.incense_type && d.incense_end_at) {
                 var incEnd = new Date(d.incense_end_at).getTime();
+                console.log('香火恢复: type=' + d.incense_type + ', endAt=' + d.incense_end_at + ', incEnd=' + incEnd + ', now=' + Date.now() + ', 有效=' + (incEnd > Date.now()));
                 if (incEnd > Date.now()) {
                     gameData.currentIncense = { type: d.incense_type, endTime: incEnd };
                 }
             }
             // 老用户：无条件标记日期+完成引导（阻止checkFirstLogin重置todayLogin）
-            // 老用户：无条件标记日期+完成引导（阻止checkFirstLogin重置todayLogin）
-            gameData.lastLoginDate = new Date().toDateString();
+            gameData.lastLoginDate = new Date().toISOString().split('T')[0];
             gameData.tutorialCompleted = true;
             // 服务器记录今天已签到 → 跳过开财门+公告
             if (d.daily_sign >= 1) {
@@ -14139,18 +14147,29 @@ async function doGameLogin() {
             }
             // 从API恢复香火状态（无痕模式下localStorage丢失时用）
             if (d.incense_type && d.incense_end_at) {
-                var _incEnd = new Date(d.incense_end_at).getTime();
+                var _incEnd = d.incense_end_at; // 已是毫秒数
                 if (_incEnd > Date.now()) {
                     gameData.currentIncense = { type: d.incense_type, endTime: _incEnd };
                 }
             }
+            // 恢复已读公告和消息
+            if (d.read_announcements) {
+                try { gameData.readAnnouncements = JSON.parse(d.read_announcements); } catch(e) {}
+            }
+            if (d.mails) {
+                try { gameData.mails = JSON.parse(d.mails); } catch(e) {}
+            }
+        } else {
+            // API失败时使用默认数据，不读本地缓存
+            console.log('API失败，使用默认数据');
         }
         // 老用户shengxiao丢失（无痕浏览器），给默认值
         if (gameData.shengxiao === null || gameData.shengxiao === undefined) { gameData.shengxiao = 1; }
-        // 保存到本地（不立即同步到服务器，避免覆盖）
-        localStorage.setItem('caishen_v19', JSON.stringify(gameData));
+        // 保存到本地并同步到服务器
+        saveGame();
         // 【重要】不调用loadGame，直接使用服务器数据
         init();
+        updatePlayerIdDisplay(); // 确保玩家ID显示
         startApiSync();
         if (!getPlayerName()) showNamingDialog(true);
         V19_API.track('login', { method: 'password' });
@@ -14206,24 +14225,16 @@ async function doGameRegister() {
 function doGameLogout() {
     // 先同步数据到服务器，再清本地
     if (V19_API.token && gameData.money !== undefined) {
-        // 用 sendBeacon 确保页面关闭时也能发送
-        var syncData = {
-            gold: gameData.money || 0,
-            level: gameData.level || 1,
-            yuanbao: gameData.yuanbao || 0,
-            merit: gameData.merit || 0,
-            mana: gameData.mana || 0,
-            fragments: gameData.fragments || 0,
-            banners: gameData.banners || 0,
-            faith: gameData.faith || 0,
-            reputation: gameData.reputation || 0
-        };
-        var syncPayload = JSON.stringify(syncData);
-        if (navigator.sendBeacon) {
-            navigator.sendBeacon(V19_API.base + '/api/player/sync-data',
-                new Blob([syncPayload], {type:'application/json'}));
-        }
+        // 同步后再退出（不用sendBeacon，确保数据正确）
+        V19_API.syncData(gameData).then(function(){
+            proceedLogout();
+        }).catch(function(){
+            proceedLogout();
+        });
+    } else {
+        proceedLogout();
     }
+    function proceedLogout() {
     V19_API.token = '';
     V19_API.userId = null;
     localStorage.removeItem('caishen_token');
@@ -14234,8 +14245,10 @@ function doGameLogout() {
     Object.keys(gameData).forEach(function(k) { delete gameData[k]; });
     Object.assign(gameData, JSON.parse(GAME_DATA_DEFAULTS));
     // 强制清除所有可能残留的缓存
+    window._initStarted = false;
     localStorage.clear();
     showGameLogin();
+    }
 }
 
 // ===== 自动保存到API（定时） =====
@@ -14376,7 +14389,6 @@ function showNamingDialog(isFirst) {
 // 页面加载后检查是否需要取名
 window.addEventListener("DOMContentLoaded", function() {
     setTimeout(function() {
-        generatePlayerId();
         updatePlayerNameDisplay();
         updatePlayerIdDisplay();
         if (!getPlayerName()) { var _lo = document.getElementById('game-login-overlay'); if (!_lo || _lo.style.display === 'none') { /* 取名由API登录流程处理，这里不弹 */ } }

@@ -70,13 +70,15 @@ router.post('/go', authMiddleware, async (req, res, next) => {
 
     // 查玩家数据
     const [rows] = await pool.query(
-      'SELECT gold, daily_alms, alms_miss_streak FROM player_data WHERE user_id = ?',
+      'SELECT gold, mana, daily_alms, alms_miss_streak FROM player_data WHERE user_id = ?',
       [req.userId]
     );
     if (rows.length === 0) return fail(res, '玩家数据不存在');
     const p = rows[0];
 
+    const MANA_COST = 5;
     if (p.daily_alms <= 0) return fail(res, '今日化缘次数已用完');
+    if (p.mana < MANA_COST) return fail(res, `法力不足${MANA_COST}点，无法化缘`);
     if (p.gold < cfg.threshold) return fail(res, `金币不足 ${cfg.threshold}，无法进入${cfg.name}`);
 
     // 投入金额（门槛的10%）
@@ -124,10 +126,11 @@ router.post('/go', authMiddleware, async (req, res, next) => {
     await pool.query(
       `UPDATE player_data SET
         gold = gold + ?,
+        mana = mana - ?,
         daily_alms = daily_alms - 1,
         alms_miss_streak = ?
        WHERE user_id = ?`,
-      [netGain, newMissStreak, req.userId]
+      [netGain, MANA_COST, newMissStreak, req.userId]
     );
 
     // 记日志
@@ -155,6 +158,7 @@ router.post('/go', authMiddleware, async (req, res, next) => {
       netGain,
       remainAlms: p.daily_alms - 1,
       newGold: p.gold + netGain,
+      newMana: p.mana - MANA_COST,
       missStreak: newMissStreak,
     }, `${cfg.name}化缘 —— ${resultNames[resultKey]}！`);
 
