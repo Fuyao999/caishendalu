@@ -121,6 +121,7 @@
             <div class="res-item"><span class="res-value" id="res-banners">0</span><span class="res-label">🎏招财幡</span></div>
             <div class="res-item"><span class="res-value" id="res-mana">100</span><span class="res-label">💧法力</span></div>
             <div class="res-item"><span class="res-value" id="res-level">1</span><span class="res-label">🏛️等级</span></div>
+            <div class="res-item"><span class="res-value" id="res-realm">灵种入体</span><span class="res-label">🌀境界</span></div>
             <div class="res-item"><span class="res-value" id="res-faith">0</span><span class="res-label">👥善缘</span></div>
             <div class="res-item"><span class="res-value" id="res-reputation">0</span><span class="res-label">👑声望</span></div>
         </div>
@@ -615,6 +616,30 @@ const gods = [
     { id: 'zhaogongming', name: '赵公明', title: '正财神', effect: '香火钱+25%', type: 'money', bonus: 0.25, unlocked: false, unlockAll: true, unlockMoneyCost: 500000, icon: '👑' }
 ];
 
+// 境界名称映射（对应服务器 helpers.js 的 REALMS）
+function getRealmName(level) {
+    const REALMS = [
+        { minLevel: 1,  name: '灵种入体' },
+        { minLevel: 2,  name: '灵根初萌' },
+        { minLevel: 3,  name: '灵识渐明' },
+        { minLevel: 4,  name: '灵体凝聚' },
+        { minLevel: 5,  name: '财源启灵' },
+        { minLevel: 6,  name: '炼气期·聚气生财' },
+        { minLevel: 11, name: '筑基期·筑财为基' },
+        { minLevel: 21, name: '结丹期·凝结财丹' },
+        { minLevel: 31, name: '元婴期·元财化婴' },
+        { minLevel: 41, name: '化神期·财神化神' },
+        { minLevel: 51, name: '炼虚期·炼虚聚财' },
+        { minLevel: 61, name: '合体期·合体生财' },
+        { minLevel: 71, name: '大乘期·大乘散财' },
+        { minLevel: 81, name: '真仙期·财道真仙' }
+    ];
+    for (let i = REALMS.length - 1; i >= 0; i--) {
+        if (level >= REALMS[i].minLevel) return REALMS[i].name;
+    }
+    return REALMS[0].name;
+}
+
 const templeData = {
     1: { output: 2400, storage: 5000, repair: 10, stage: '泥胎' },
     2: { output: 4320, storage: 10000, repair: 20, stage: '泥胎' },
@@ -740,8 +765,8 @@ function loadGame() {
 function saveGame() {
     localStorage.setItem('caishen_v19', JSON.stringify(gameData));
     // 立即同步到服务器（关键：不能等2分钟）
-    if (V19_API && V19_API.token && V19_API.userId) {
-        V19_API.syncData(gameData).then(function(){
+    if (V20_API && V20_API.token && V20_API.userId) {
+        V20_API.syncData(gameData).then(function(){
             console.log('✅ 数据已同步到服务器');
         }).catch(function(e){ 
             console.log('❌ 同步失败:', e); 
@@ -1056,8 +1081,8 @@ function renewIncense(type) {
     updateUI();
     saveGame();
     // 同步香火状态到服务器（无痕模式恢复用）
-    if (V19_API && V19_API.token) {
-        V19_API.fetch('/api/player/update-incense', {
+    if (V20_API && V20_API.token) {
+        V20_API.fetch('/api/player/update-incense', {
             method: 'POST',
             body: JSON.stringify({
                 incense_type: gameData.currentIncense.type,
@@ -11426,7 +11451,7 @@ function openHeavenGate() {
     updateUI();
     saveGame();
     // 立即同步到服务器
-    V19_API.syncData(gameData).catch(function(){});
+    V20_API.syncData(gameData).catch(function(){});
 }
 
 function checkUnlocks() {
@@ -11818,6 +11843,9 @@ function updateUI() {
     document.getElementById('res-banners').textContent = gameData.banners;
     document.getElementById('res-mana').textContent = Math.floor(gameData.mana);
     document.getElementById('res-level').textContent = gameData.level;
+    // 更新境界显示
+    const realmName = getRealmName(gameData.level);
+    document.getElementById('res-realm').textContent = realmName;
     document.getElementById('res-faith').textContent = Math.floor(gameData.faith);
     document.getElementById('res-reputation').textContent = gameData.reputation;
     
@@ -13287,17 +13315,17 @@ function showTutorial() {
         return;
     }
 
-    var tokenValid = await V19_API.checkToken();
+    var tokenValid = await V20_API.checkToken();
     if (tokenValid) {
         // 【重要】已登录，只从服务器获取数据，不进行任何本地加载
         hideGameLogin();
         // 先获取服务器最新数据
-        var pd = await V19_API.getPlayerData();
+        var pd = await V20_API.getPlayerData();
         if (pd && pd.code === 200 && pd.data) {
             var d = pd.data;
             console.log('从服务器加载数据:', d);
             // 设置userId（内部自增ID），确保saveGame能正确同步
-            if (d.user_id) V19_API.userId = d.user_id;
+            if (d.user_id) V20_API.userId = d.user_id;
             // 强制用服务器数据覆盖本地数据
             if (d.gold !== undefined) gameData.money = d.gold;
             if (d.level !== undefined) gameData.level = d.level;
@@ -13914,7 +13942,7 @@ initInvSR();
 
         
         // ===== V19 API连接层 =====
-var V19_API = {
+var V20_API = {
     base: 'http://localhost:3000',
     token: localStorage.getItem('caishen_token') || '',
     userId: null,
@@ -14038,6 +14066,11 @@ var V19_API = {
         });
     },
 
+    // 每日重置
+    async dailyReset() {
+        return await this.fetch('/api/player/daily-reset', { method: 'POST' });
+    },
+
     // 获取排行榜
     async getRank() {
         return await this.fetch('/api/pvp/rank?limit=20');
@@ -14101,7 +14134,7 @@ async function doGameLogin() {
     errEl.style.display = 'none';
     var btn = document.getElementById('game-login-btn');
     btn.textContent = '\u767b\u5f55\u4e2d...'; btn.disabled = true;
-    var result = await V19_API.login(u, p);
+    var result = await V20_API.login(u, p);
     btn.textContent = '\u8fdb\u5165\u8d22\u795e\u5927\u9646'; btn.disabled = false;
     if (result.success) {
         hideGameLogin();
@@ -14111,7 +14144,7 @@ async function doGameLogin() {
         Object.keys(gameData).forEach(function(k) { delete gameData[k]; });
         Object.assign(gameData, JSON.parse(GAME_DATA_DEFAULTS));
         // 从API加载玩家数据（优先用服务器数据）
-        var pd = await V19_API.getPlayerData();
+        var pd = await V20_API.getPlayerData();
         console.log('getPlayerData返回:', pd);
         if (pd && pd.code === 200 && pd.data) {
             // 服务器数据加载成功，覆盖本地缓存
@@ -14210,6 +14243,17 @@ async function doGameLogin() {
         }
         // 老用户shengxiao丢失（无痕浏览器），给默认值
         if (gameData.shengxiao === null || gameData.shengxiao === undefined) { gameData.shengxiao = 1; }
+        // 检查是否需要每日重置（日期变了就重置）
+        const today = new Date().toISOString().split('T')[0];
+        if (gameData.lastLoginDate !== today) {
+            console.log('日期变了，执行每日重置');
+            V20_API.dailyReset().then(function() {
+                gameData.dailyAlms = 20;
+                gameData.dailySign = 0;
+                gameData.lastLoginDate = today;
+                saveGame();
+            }).catch(function(){});
+        }
         // 保存到本地并同步到服务器
         saveGame();
         // 【重要】不调用loadGame，直接使用服务器数据
@@ -14220,7 +14264,7 @@ async function doGameLogin() {
         updateUI(); // 更新UI（包括升级按钮状态）
         startApiSync();
         if (!getPlayerName()) showNamingDialog(true);
-        V19_API.track('login', { method: 'password' });
+        V20_API.track('login', { method: 'password' });
     } else {
         errEl.textContent = result.message; errEl.style.display = 'block';
     }
@@ -14237,11 +14281,11 @@ async function doGameRegister() {
     errEl.style.display = 'none';
     var btn = document.getElementById('game-reg-btn');
     btn.textContent = '\u6ce8\u518c\u4e2d...'; btn.disabled = true;
-    var data = await V19_API.register(u, p, nick || u);
+    var data = await V20_API.register(u, p, nick || u);
     btn.textContent = '\u521b\u5efa\u8d26\u53f7'; btn.disabled = false;
     if (data && data.code === 200) {
         // 注册成功，自动登录
-        var result = await V19_API.login(u, p);
+        var result = await V20_API.login(u, p);
         if (result.success) {
             hideGameLogin();
             // 新注册：彻底重置游戏数据
@@ -14266,7 +14310,7 @@ async function doGameRegister() {
             init();
             updateUI(); // 更新UI（包括升级按钮状态）
             startApiSync();
-            V19_API.track('register', { method: 'password' });
+            V20_API.track('register', { method: 'password' });
         }
     } else {
         errEl.textContent = (data && data.message) || '\u6ce8\u518c\u5931\u8d25'; errEl.style.display = 'block';
@@ -14275,9 +14319,9 @@ async function doGameRegister() {
 // 登出
 function doGameLogout() {
     // 先同步数据到服务器，再清本地
-    if (V19_API.token && gameData.money !== undefined) {
+    if (V20_API.token && gameData.money !== undefined) {
         // 同步后再退出（不用sendBeacon，确保数据正确）
-        V19_API.syncData(gameData).then(function(){
+        V20_API.syncData(gameData).then(function(){
             proceedLogout();
         }).catch(function(){
             proceedLogout();
@@ -14286,8 +14330,8 @@ function doGameLogout() {
         proceedLogout();
     }
     function proceedLogout() {
-    V19_API.token = '';
-    V19_API.userId = null;
+    V20_API.token = '';
+    V20_API.userId = null;
     localStorage.removeItem('caishen_token');
     localStorage.removeItem('caishen_username');
     localStorage.removeItem('caishen_v19');
@@ -14307,17 +14351,17 @@ var _apiSyncTimer = null;
 function startApiSync() {
     if (_apiSyncTimer) clearInterval(_apiSyncTimer);
     _apiSyncTimer = setInterval(function() {
-        if (V19_API.token) {
-            V19_API.syncData(gameData).catch(function(){});
+        if (V20_API.token) {
+            V20_API.syncData(gameData).catch(function(){});
         }
     }, 10000); // 每10秒同步一次
 }
 
 // 页面关闭前强制同步
 window.addEventListener('beforeunload', function() {
-    if (V19_API.token) {
+    if (V20_API.token) {
         navigator.sendBeacon && navigator.sendBeacon(
-            V19_API.base + '/api/player/sync-data',
+            V20_API.base + '/api/player/sync-data',
             JSON.stringify({
                 gold: gameData.money,
                 level: gameData.level,
@@ -14337,7 +14381,7 @@ function guestLogin() {
     hideGameLogin();
     loadGame();
     init();
-    V19_API.track('guest_login', {});
+    V20_API.track('guest_login', {});
 }
 
         // ===== 玩家ID系统 =====
@@ -14352,8 +14396,8 @@ function generatePlayerId() {
         console.log("生成玩家ID:", gameData.playerId);
         saveGame();
         // 同步到服务器
-        if (V19_API && V19_API.token) {
-            V19_API.fetch('/api/player/update-player-id', {
+        if (V20_API && V20_API.token) {
+            V20_API.fetch('/api/player/update-player-id', {
                 method: 'POST',
                 body: JSON.stringify({ player_id: gameData.playerId })
             }).catch(function(e){ console.log('同步ID失败:', e); });
@@ -14427,8 +14471,8 @@ function showNamingDialog(isFirst) {
         setPlayerName(name);
         updatePlayerNameDisplay();
         saveGame();
-        if (V19_API && V19_API.token) {
-            V19_API.fetch('/api/player/update-nickname', { method: 'POST', body: JSON.stringify({ nickname: name }) }).catch(function(){});
+        if (V20_API && V20_API.token) {
+            V20_API.fetch('/api/player/update-nickname', { method: 'POST', body: JSON.stringify({ nickname: name }) }).catch(function(){});
         }
         var ol = document.getElementById("naming-overlay");
         if (ol) ol.remove();
