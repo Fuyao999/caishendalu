@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>财神大陆 V19</title>
+    <title>财神大陆 V20</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); min-height: 100vh; color: #fff; padding: 10px; font-size: 13px; }
@@ -569,6 +569,7 @@ const gameData = {
     lastLoginTime: null, loginDays: 1, consecutiveDays: 1, todayLogin: false, lastLoginDate: null,
     shengxiao: null, shengxiaoBonus: false,
     openedHeaven: false, // 天门是否已开启
+    deityBuff: {}, // 财神庇佑：{ deityId: { count: 次数, bonus: 加成 } }
     beAlmsCount: 0, shieldActive: false, shieldEndTime: null,
     bushuSmall: 0, bushuMedium: 0, bushuLarge: 0,
     visitCount: 0, // 每日拜访好友次数
@@ -639,6 +640,72 @@ function getRealmName(level) {
     }
     return REALMS[0].name;
 }
+
+// ==================== 财神庇佑系统 ====================
+// 供奉财神获得庇佑次数
+function doWorshipGainBlessing(deityId, materialType) {
+    var god = gods.find(function(g) { return g.id === deityId; });
+    if (!god) return;
+    var mat = materials[materialType];
+    if (!mat) return;
+    // 材料时长决定庇佑次数：线香1次、红烛3次、金纸5次、供果10次
+    var blessingCount = mat.duration;
+    addDeityBlessing(deityId, blessingCount, god.bonus);
+    // 立即同步到服务器
+    V20_API.syncData(gameData).catch(function(){});
+    log('alms-log', '🙏 供奉' + god.icon + god.name + '，获得' + blessingCount + '次庇佑！');
+}
+
+// 添加财神庇佑次数
+function addDeityBlessing(deityId, count, bonus) {
+    if (!gameData.deityBuff) gameData.deityBuff = {};
+    if (!gameData.deityBuff[deityId]) {
+        gameData.deityBuff[deityId] = { count: 0, bonus: bonus || 0 };
+    }
+    gameData.deityBuff[deityId].count += count;
+    gameData.deityBuff[deityId].bonus = bonus || gameData.deityBuff[deityId].bonus;
+    saveGame();
+    updateUI();
+}
+
+// 获取有庇佑的财神列表（用于化缘时选择）
+function getAvailableBlessings() {
+    const result = [];
+    const db = gameData.deityBuff || {};
+    gods.forEach(function(god) {
+        if (db[god.id] && db[god.id].count > 0) {
+            result.push({
+                id: god.id,
+                name: god.name,
+                icon: god.icon,
+                count: db[god.id].count,
+                bonus: db[god.id].bonus || god.bonus,
+                type: god.type
+            });
+        }
+    });
+    return result;
+}
+
+// 使用1次财神庇佑（化缘时调用）
+function useDeityBlessing(deityId) {
+    if (!gameData.deityBuff || !gameData.deityBuff[deityId] || gameData.deityBuff[deityId].count <= 0) {
+        return null;
+    }
+    var god = gods.find(function(g) { return g.id === deityId; });
+    gameData.deityBuff[deityId].count--;
+    if (gameData.deityBuff[deityId].count <= 0) {
+        delete gameData.deityBuff[deityId];
+    }
+    saveGame();
+    updateUI();
+    // 立即同步到服务器
+    V20_API.syncData(gameData).catch(function(){});
+    
+    return god ? { type: god.type, bonus: god.bonus } : null;
+}
+
+// ====================
 
 const templeData = {
     1: { output: 2400, storage: 5000, repair: 10, stage: '泥胎' },
@@ -953,8 +1020,8 @@ function updateTempleOutput() {
     // 信徒贡献（善缘）从产出计算
     gameData.faith += (temple.output / 86400 * elapsed) / 100;
     
-    // 法力恢复：10点/小时，只要<100就开始恢复
-    if (gameData.mana < 100) gameData.mana = Math.min(100, gameData.mana + elapsed * 10 / 3600);
+    // 法力恢复：测试用5秒1点，正式可改回50点/小时
+    if (gameData.mana < 100) gameData.mana = Math.min(100, gameData.mana + elapsed / 5);
     
     gameData.lastUpdateTime = now;
 }
@@ -1015,14 +1082,15 @@ function worship() {
     if (gods.find(g=>g.id==='xiaosheng').unlocked) merit = Math.floor(merit * 1.1);
     gameData.money += reward; 
     gameData.merit += merit;
+    // 6级及以上用户不再使用护盾系统，只记录庇佑次数
     if (gameData.level < 6) {
         if (!activeBuffs[god.id]) activeBuffs[god.id] = 0;
         activeBuffs[god.id] += mat.duration;
         log('temple-log', `🙏 供奉${god.name}(${mat.name}) +${reward}钱 +${merit}功德 BUFF${activeBuffs[god.id]}次`);
-    } else {
-        activeBuffs[god.id] = mat.duration;
-        log('temple-log', `🙏 供奉${god.name}(${mat.name}) +${reward}钱 +${merit}功德 BUFF刷新${mat.duration}次`);
     }
+    // else: 6级及以上不再记录activeBuffs，避免与庇佑系统重复显示
+    // 添加财神庇佑次数（根据材料：线香1次、红烛3次、金纸5次、供果10次）
+    doWorshipGainBlessing(god.id, selectedMat);
     checkUnlocks(); 
     updateUI();
     renderTasks(); // 刷新任务列表，让供奉任务可以领取
@@ -10891,8 +10959,8 @@ function v19Click(areaId) {
 }
 
 function v19Choose(choice) {
-    document.getElementById('v19-evt').style.display = 'none';
     var area = _v19area; if (!area) return;
+    document.getElementById('v19-evt').style.display = 'none';
     // 检查法力值是否足够（每次化缘消耗5点）
     if ((gameData.mana || 0) < 5) {
         log('alms-log', '❌ 法力值不足！需要5点法力值');
@@ -10923,6 +10991,28 @@ function v19Choose(choice) {
     gameData.areaVisited[area.id] = true;
     if (outcome === 'JP') { gameData.totalJackpot = (gameData.totalJackpot || 0) + 1; gameData.greatCount = (gameData.greatCount || 0) + 1; gameData.hasGreatLuck = true; }
     if (outcome === 'BW') { gameData.greatCount = (gameData.greatCount || 0) + 1; }
+    
+    // 检查是否有财神庇佑可以加成
+    var blessings = getAvailableBlessings();
+    var bonusApplied = null;
+    var bonusText = '';
+    if (blessings.length > 0) {
+        var used = blessings[0];
+        var bonusInfo = useDeityBlessing(used.id);
+        if (bonusInfo) {
+            bonusApplied = used;
+            if (bonusInfo.type === 'money' || bonusInfo.type === 'alms') {
+                var extraMoney = Math.floor(Math.abs(profit) * bonusInfo.bonus);
+                gameData.money += extraMoney;
+                bonusText = '\n✨ ' + used.icon + used.name + '庇佑+' + (extraMoney.toLocaleString()) + '香火钱';
+            } else if (bonusInfo.type === 'crit') {
+                // 暴击：双倍收益
+                gameData.money += Math.abs(profit);
+                bonusText = '\n✨ ' + used.icon + used.name + '庇佑暴击！+' + (Math.abs(profit).toLocaleString()) + '香火钱';
+            }
+        }
+    }
+    
     var d = V19_DISP[outcome] || {icon:'❓',title:'未知',color:'#fff'};
     document.getElementById('v19-res-icon').textContent = d.icon;
     var te = document.getElementById('v19-res-title');
@@ -10938,7 +11028,7 @@ function v19Choose(choice) {
         var transText = trans[Math.floor(Math.random() * trans.length)];
         var resTexts = V19_RES_TEXTS[outcome] || ['命运已定。'];
         var resText = resTexts[Math.floor(Math.random() * resTexts.length)];
-        storyText = transText + '\n\n' + resText;
+        storyText = transText + '\n\n' + resText + bonusText;
     }
     document.getElementById('v19-res-story').textContent = storyText;
     var ae = document.getElementById('v19-res-amount');
@@ -10947,7 +11037,7 @@ function v19Choose(choice) {
     document.getElementById('v19-res-bal').textContent = '当前余额：' + Math.floor(gameData.money).toLocaleString();
     document.getElementById('v19-res').style.display = 'flex';
     var tn = {JP:'🐉大吉',BW:'🎉小吉',NM:'☯️顺利',SW:'💸破财',MS:'💀大凶',W2:'大吉大利',L2:'非酋本酋'};
-    log('alms-log', (tn[outcome]||outcome) + ' | ' + area.trigram + area.name + ' | ' + (profit>=0?'+':'') + profit.toLocaleString() + '钱');
+    log('alms-log', (tn[outcome]||outcome) + ' | ' + area.trigram + area.name + ' | ' + (profit>=0?'+':'') + profit.toLocaleString() + '钱' + (bonusApplied ? ' (使用' + bonusApplied.name + '庇佑)' : ''));
     if (area.type === '2r' && typeof addMarquee === 'function') {
         addMarquee('玩家在' + area.name + '化缘，' + (outcome==='W2'?'大吉！':'大凶...'));
     }
@@ -11951,15 +12041,18 @@ function updateUI() {
     const visitCountEl = document.getElementById('visit-count');
     if (visitCountEl) visitCountEl.textContent = gameData.visitCount;
     
-    let buffHtml = '';
-    for (const id in activeBuffs) {
-        if (activeBuffs[id] > 0) {
-            const god = gods.find(g=>g.id===id);
-            buffHtml += `<span class="buff-item">${god.name}(${activeBuffs[id]})</span>`;
-        }
-    }
+    // 统一显示：始终显示财神庇佑次数
     const buffListEl = document.getElementById('buff-list');
-    if (buffListEl) buffListEl.innerHTML = buffHtml || '无';
+    if (buffListEl) {
+        const db = gameData.deityBuff || {};
+        let blessingHtml = '';
+        gods.forEach(function(god) {
+            if (db[god.id] && db[god.id].count > 0) {
+                blessingHtml += '<span class="buff-item">✨' + god.icon + god.name + '(' + db[god.id].count + ')</span> ';
+            }
+        });
+        buffListEl.innerHTML = blessingHtml || '无';
+    }
     
     // 升级信息
     const btnUpgradeEl = document.getElementById('btn-upgrade');
@@ -13338,6 +13431,11 @@ function showTutorial() {
             if (d.reputation !== undefined) gameData.reputation = d.reputation;
             if (d.temple_storage !== undefined) gameData.templeStorage = d.temple_storage;
             if (d.opened_heaven !== undefined) gameData.openedHeaven = d.opened_heaven == 1;
+            if (d.deity_buff) {
+                try { gameData.deityBuff = JSON.parse(d.deity_buff); } catch(e) { gameData.deityBuff = {}; }
+            } else {
+                gameData.deityBuff = {};
+            }
             if (d.gold_paper !== undefined) gameData.gold_paper = d.gold_paper;
             if (d.fruits !== undefined) gameData.fruits = d.fruits;
             if (d.incense_sticks !== undefined) gameData.incense_sticks = d.incense_sticks;
@@ -14061,7 +14159,8 @@ var V20_API = {
                 read_announcements: gd.readAnnouncements ? JSON.stringify(gd.readAnnouncements) : null,
                 mails: gd.mails ? JSON.stringify(gd.mails) : null,
                 temple_storage: gd.templeStorage || 0,
-                opened_heaven: gd.openedHeaven ? 1 : 0
+                opened_heaven: gd.openedHeaven ? 1 : 0,
+                deity_buff: gd.deityBuff ? JSON.stringify(gd.deityBuff) : null
             })
         });
     },
@@ -14143,6 +14242,10 @@ async function doGameLogin() {
         // 重置gameData到初始状态，避免旧数据残留
         Object.keys(gameData).forEach(function(k) { delete gameData[k]; });
         Object.assign(gameData, JSON.parse(GAME_DATA_DEFAULTS));
+        // 重置财神解锁状态（只有土地公默认解锁）
+        gods.forEach(function(god) {
+            god.unlocked = (god.id === 'tudigong');
+        });
         // 从API加载玩家数据（优先用服务器数据）
         var pd = await V20_API.getPlayerData();
         console.log('getPlayerData返回:', pd);
@@ -14163,6 +14266,11 @@ async function doGameLogin() {
             if (d.reputation !== undefined) gameData.reputation = d.reputation;
             if (d.temple_storage !== undefined) gameData.templeStorage = d.temple_storage;
             if (d.opened_heaven !== undefined) gameData.openedHeaven = d.opened_heaven == 1;
+            if (d.deity_buff) {
+                try { gameData.deityBuff = JSON.parse(d.deity_buff); } catch(e) { gameData.deityBuff = {}; }
+            } else {
+                gameData.deityBuff = {};
+            }
             if (d.gold_paper !== undefined) gameData.gold_paper = d.gold_paper;
             if (d.fruits !== undefined) gameData.fruits = d.fruits;
             if (d.incense_sticks !== undefined) gameData.incense_sticks = d.incense_sticks;
@@ -14291,6 +14399,10 @@ async function doGameRegister() {
             // 新注册：彻底重置游戏数据
             Object.keys(gameData).forEach(function(k) { delete gameData[k]; });
             Object.assign(gameData, JSON.parse(GAME_DATA_DEFAULTS));
+            // 重置财神解锁状态（只有土地公默认解锁）
+            gods.forEach(function(god) {
+                god.unlocked = (god.id === 'tudigong');
+            });
             // 新用户赠送初始线香2小时
             gameData.currentIncense = { type: 'incense', endTime: Date.now() + 2 * 3600 * 1000 };
             localStorage.removeItem('caishen_v19');
