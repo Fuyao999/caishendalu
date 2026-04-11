@@ -360,6 +360,7 @@
                 </li>
                 <!-- ===== 新增页面 ===== -->
                 <li style="border-top:1px solid rgba(255,255,255,0.1);margin:8px 0;padding:0"></li>
+                <li onclick="showPage('buffdebug')"><span>🔧 加成调试</span></li>
                 <li onclick="showPage('analytics')"><span>📊 埋点管理</span></li>
                 <li onclick="showPage('products')"><span>🏪 商品管理</span></li>
                 <li onclick="showPage('items')"><span>🎒 道具管理</span></li>
@@ -1041,6 +1042,32 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- 加成调试面板 -->
+            <div id="buffdebug" class="page" style="display:none;">
+                <div class="header">
+                    <h2>🔧 加成调试</h2>
+                </div>
+                <div class="search-box">
+                    <input type="number" id="buffUserId" placeholder="输入玩家ID" style="width:150px;padding:8px 12px;border:1px solid #0f3460;background:#1a1a2e;color:#eee;border-radius:4px">
+                    <button class="btn btn-primary" onclick="loadBuffDebug()">查询</button>
+                </div>
+                <div id="buffDebugContent" style="display:none;">
+                    <div class="panel" style="margin-top:15px">
+                        <div class="panel-header"><span class="panel-title">🎴 财神庇佑</span></div>
+                        <div class="panel-body" id="buffDeityList"></div>
+                    </div>
+                    <div class="panel" style="margin-top:15px">
+                        <div class="panel-header"><span class="panel-title">💰 资源产出加成</span></div>
+                        <div class="panel-body" id="buffOutputList"></div>
+                    </div>
+                    <div class="panel" style="margin-top:15px">
+                        <div class="panel-header"><span class="panel-title">📊 加成汇总</span></div>
+                        <div class="panel-body" id="buffSummary"></div>
+                    </div>
+                </div>
+                <div id="buffDebugEmpty" style="text-align:center;color:#888;padding:40px">输入玩家ID查询加成状态</div>
             </div>
 
             <div id="logs" class="page" style="display:none;">
@@ -2855,6 +2882,7 @@ async function loadAntiCheat(page = 1) {
                 case 'pvp': loadPvp(); break;
                 case 'events': loadEvents(); break;
                 case 'anticheat': loadAntiCheat(); break;
+                case 'buffdebug': break;
                 case 'announcements': loadAnnouncements(); break;
                 case 'deities': loadDeities(); break;
                 case 'stories': loadStories(); break;
@@ -2973,6 +3001,81 @@ function deleteAnnouncement(id) {
             loadAnnouncements();
         } else { showToast('删除失败', 'warn'); }
     });
+}
+
+// --- 加成调试面板 ---
+async function loadBuffDebug() {
+    var userId = document.getElementById('buffUserId').value.trim();
+    if (!userId) { showToast('请输入玩家ID', 'warn'); return; }
+    var content = document.getElementById('buffDebugContent');
+    var empty = document.getElementById('buffDebugEmpty');
+    content.style.display = 'none';
+    empty.style.display = 'block';
+    empty.textContent = '加载中...';
+
+    var data = await apiFetch('/api/admin/users/' + userId);
+    if (!data || data.code !== 200) {
+        empty.textContent = '玩家不存在或加载失败';
+        return;
+    }
+    var p = data.data.player;
+    if (!p) { empty.textContent = '玩家数据不存在'; return; }
+
+    empty.style.display = 'none';
+    content.style.display = 'block';
+
+    // 财神庇佑
+    var deityBuff = [];
+    try { deityBuff = p.deity_buff ? JSON.parse(p.deity_buff) : []; } catch(e) {}
+    var deityNames = {
+        tudigong: '土地公', guanyu: '关羽', yaoshaosi: '姚少司',
+        chenjiugong: '陈九公', fanli: '范蠡', caobao: '曹宝',
+        liuhai: '刘海', xiaosheng: '萧升', zhaogongming: '赵公明'
+    };
+    var deityTypeNames = { money: '香火钱+', alms: '化缘+', worship: '供奉+', exp: '经验+' };
+    var deityHtml = deityBuff.length ? deityBuff.map(function(d) {
+        return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #0f3460">' +
+            '<span>' + (deityNames[d.id] || d.id) + '</span>' +
+            '<span style="color:#4ade80">' + (deityTypeNames[d.type] || '+') + (d.bonus * 100).toFixed(0) + '%</span>' +
+            '<span style="color:#888">剩余' + d.count + '次</span></div>';
+    }).join('') : '<div style="color:#888;padding:10px">暂无激活的财神庇佑</div>';
+    document.getElementById('buffDeityList').innerHTML = deityHtml;
+
+    // 资源产出加成（根据等级和境界计算基础值）
+    var level = p.level || 1;
+    var realm = p.realm || 1;
+    var baseOutput = Math.floor(100 * Math.pow(1.2, level - 1));
+    var outputHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+        '<div style="background:#1a1a2e;padding:12px;border-radius:6px">' +
+        '<div style="color:#888;font-size:12px">基础产出</div>' +
+        '<div style="font-size:20px;font-weight:bold;color:#FFD700">' + baseOutput.toLocaleString() + '/小时</div></div>' +
+        '<div style="background:#1a1a2e;padding:12px;border-radius:6px">' +
+        '<div style="color:#888;font-size:12px">当前境界</div>' +
+        '<div style="font-size:20px;font-weight:bold;color:#4ade80">' + (p.realm_name || '凡人') + '</div></div>' +
+        '<div style="background:#1a1a2e;padding:12px;border-radius:6px">' +
+        '<div style="color:#888;font-size:12px">玩家等级</div>' +
+        '<div style="font-size:20px;font-weight:bold">Lv.' + level + '</div></div>' +
+        '<div style="background:#1a1a2e;padding:12px;border-radius:6px">' +
+        '<div style="color:#888;font-size:12px">财神加成</div>' +
+        '<div style="font-size:20px;font-weight:bold;color:#4ade80">+' + (deityBuff.reduce(function(s,d){return s+(d.type==='money'?d.bonus*100:0);},0)).toFixed(0) + '%</div></div>' +
+        '</div>';
+    document.getElementById('buffOutputList').innerHTML = outputHtml;
+
+    // 加成汇总
+    var totalGoldBonus = deityBuff.reduce(function(s,d){return s+(d.type==='money'?d.bonus*100:0);},0);
+    var totalAlmsBonus = deityBuff.reduce(function(s,d){return s+(d.type==='alms'?d.bonus*100:0);},0);
+    var summaryHtml = '<table style="width:100%;border-collapse:collapse">' +
+        '<tr style="border-bottom:1px solid #0f3460"><th style="text-align:left;padding:10px 0;color:#888">加成类型</th><th style="text-align:right;padding:10px 0;color:#888">加成值</th></tr>' +
+        '<tr><td style="padding:8px 0">💰 香火钱加成</td><td style="text-align:right;color:#FFD700">+' + totalGoldBonus.toFixed(1) + '%</td></tr>' +
+        '<tr><td style="padding:8px 0">🎴 化缘加成</td><td style="text-align:right;color:#4ade80">+' + totalAlmsBonus.toFixed(1) + '%</td></tr>' +
+        '<tr style="border-top:1px solid #0f3460"><td style="padding:10px 0;font-weight:bold">📊 总计</td><td style="text-align:right;font-weight:bold;color:#fff">+' + (totalGoldBonus + totalAlmsBonus).toFixed(1) + '%</td></tr>' +
+        '</table>' +
+        '<div style="margin-top:15px;padding:12px;background:#1a1a2e;border-radius:6px;font-size:12px;color:#888">' +
+        '<div style="color:#e94560;margin-bottom:5px">⚠️ 调试说明</div>' +
+        '<div>• 装备/道具/座驾加成将在对应系统实装后显示</div>' +
+        '<div>• 加成计算公式：最终产出 = 基础产出 × (1 + 加成%)</div>' +
+        '<div>• 财神庇佑需在化缘/供奉时手动使用</div></div>';
+    document.getElementById('buffSummary').innerHTML = summaryHtml;
 }
 
 // --- 财神管理 ---
