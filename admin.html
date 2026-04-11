@@ -1005,7 +1005,7 @@
                     <div class="panel-header"><span class="panel-title">历史公告</span></div>
                     <div class="panel-body">
                         <table>
-                            <thead><tr><th>ID</th><th>标题</th><th>类型</th><th>发布人</th><th>发布时间</th><th>状态</th><th>操作</th></tr></thead>
+                            <thead><tr><th>ID</th><th>标题</th><th>类型</th><th>优先级</th><th>状态</th><th>发布时间</th><th>操作</th></tr></thead>
                             <tbody>
                                 <tr><td>ANN001</td><td>【维护】3月28日服务器维护公告</td><td><span class="badge badge-warning">维护</span></td><td>admin</td><td>2026-03-28 08:00</td><td><span class="badge badge-success">已发布</span></td><td><button class="btn btn-sm btn-primary">编辑</button> <button class="btn btn-sm btn-danger">下架</button></td></tr>
                                 <tr><td>ANN002</td><td>【活动】财神诞庆典活动开启！</td><td><span class="badge badge-info">活动</span></td><td>admin</td><td>2026-03-25 10:00</td><td><span class="badge badge-success">已发布</span></td><td><button class="btn btn-sm btn-primary">编辑</button> <button class="btn btn-sm btn-danger">下架</button></td></tr>
@@ -1656,17 +1656,25 @@
             document.getElementById('announceModal').style.display = 'none';
         }
         function publishAnnouncement() {
-            var title = document.getElementById('announceTitle').value;
-            if (title) {
-                var type = document.getElementById('announceType');
-                var typeText = type.options[type.selectedIndex].text;
-                showToast('✅ 公告已发布: 【' + typeText + '】' + title, 'success');
-                closeAnnounceModal();
-                document.getElementById('announceTitle').value = '';
-                document.getElementById('announceContent').value = '';
-            } else {
-                showToast('⚠️ 请输入公告标题', 'warn');
-            }
+            var title = document.getElementById('announceTitle').value.trim();
+            var content = document.getElementById('announceContent').value.trim();
+            var typeSel = document.getElementById('announceType');
+            var type = typeSel.value;
+            if (!title) { showToast('⚠️ 请输入公告标题', 'warn'); return; }
+            apiFetch('/api/announcements/', {
+                method: 'POST',
+                body: JSON.stringify({ title: title, content: content, type: type, is_active: 1, priority: 1 })
+            }).then(function(data) {
+                if (data && data.code === 200) {
+                    showToast('✅ 公告发布成功', 'success');
+                    closeAnnounceModal();
+                    document.getElementById('announceTitle').value = '';
+                    document.getElementById('announceContent').value = '';
+                    loadAnnouncements();
+                } else {
+                    showToast('⚠️ 发布失败: ' + (data?.message || '未知错误'), 'warn');
+                }
+            }).catch(function(err) { showToast('⚠️ 网络错误', 'warn'); });
         }
 
         // ===== 事件委托：处理所有按钮点击 =====
@@ -2882,22 +2890,89 @@ async function loadAnnouncements() {
     const tbody = document.querySelector('#announcements table tbody');
     if (!tbody) return;
     if (!data || data.code !== 200) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u516c\u544a</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px">暂无公告</td></tr>';
         return;
     }
     const items = data.data.announcements || [];
     if (!items.length) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u516c\u544a</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px">暂无公告</td></tr>';
         return;
     }
+    const typeLabels = { maintenance: '维护', activity: '活动', update: '更新', urgent: '紧急', system: '系统' };
     tbody.innerHTML = items.map(a => '<tr>' +
         '<td>' + a.id + '</td>' +
         '<td>' + (a.title || '-') + '</td>' +
-        '<td><span class="badge badge-info">' + (a.type || 'system') + '</span></td>' +
+        '<td><span class="badge badge-info">' + (typeLabels[a.type] || a.type || '系统') + '</span></td>' +
         '<td>' + (a.priority || 0) + '</td>' +
-        '<td><span class="badge ' + (a.is_active ? 'badge-success' : 'badge-secondary') + '">' + (a.is_active ? '\u542f\u7528' : '\u505c\u7528') + '</span></td>' +
+        '<td><span class="badge ' + (a.is_active ? 'badge-success' : 'badge-secondary') + '">' + (a.is_active ? '启用' : '停用') + '</span></td>' +
         '<td>' + (a.created_at ? new Date(a.created_at).toLocaleString() : '-') + '</td>' +
+        '<td><button class="btn btn-sm btn-primary" onclick="editAnnouncement(' + a.id + ')">编辑</button> ' +
+        '<button class="btn btn-sm ' + (a.is_active ? 'btn-warning' : 'btn-success') + '" onclick="toggleAnnouncement(' + a.id + ',' + (a.is_active ? 0 : 1) + ')">' + (a.is_active ? '停用' : '启用') + '</button> ' +
+        '<button class="btn btn-sm btn-danger" onclick="deleteAnnouncement(' + a.id + ')">删除</button></td>' +
         '</tr>').join('');
+}
+
+function editAnnouncement(id) {
+    apiFetch('/api/announcements/' + id).then(function(data) {
+        if (!data || data.code !== 200) { showToast('获取失败', 'warn'); return; }
+        var a = data.data;
+        showModal('编辑公告 #' + id, `
+            <div style="display:grid;gap:12px">
+                <div><label style="display:block;margin-bottom:4px;color:#888">标题</label>
+                <input type="text" id="editAnnTitle" value="${a.title || ''}" style="width:100%;padding:8px;border:1px solid #0f3460;background:#1a1a2e;color:#eee;border-radius:4px"></div>
+                <div><label style="display:block;margin-bottom:4px;color:#888">类型</label>
+                <select id="editAnnType" style="width:100%;padding:8px;border:1px solid #0f3460;background:#1a1a2e;color:#eee;border-radius:4px">
+                    <option value="maintenance" ${a.type==='maintenance'?'selected':''}>维护公告</option>
+                    <option value="activity" ${a.type==='activity'?'selected':''}>活动公告</option>
+                    <option value="update" ${a.type==='update'?'selected':''}>更新公告</option>
+                    <option value="urgent" ${a.type==='urgent'?'selected':''}>紧急通知</option>
+                    <option value="system" ${a.type==='system'?'selected':''}>系统公告</option>
+                </select></div>
+                <div><label style="display:block;margin-bottom:4px;color:#888">内容</label>
+                <textarea id="editAnnContent" rows="5" style="width:100%;padding:8px;border:1px solid #0f3460;background:#1a1a2e;color:#eee;border-radius:4px;resize:vertical">${a.content || ''}</textarea></div>
+                <div style="text-align:right"><button class="btn btn-primary" onclick="saveAnnouncement(${id})">保存</button></div>
+            </div>
+        `);
+    });
+}
+
+function saveAnnouncement(id) {
+    var title = document.getElementById('editAnnTitle').value.trim();
+    var content = document.getElementById('editAnnContent').value.trim();
+    var type = document.getElementById('editAnnType').value;
+    if (!title) { showToast('标题不能为空', 'warn'); return; }
+    apiFetch('/api/announcements/' + id, {
+        method: 'PUT',
+        body: JSON.stringify({ title: title, content: content, type: type })
+    }).then(function(data) {
+        if (data && data.code === 200) {
+            showToast('保存成功', 'success');
+            closeGlobalModal();
+            loadAnnouncements();
+        } else { showToast('保存失败', 'warn'); }
+    });
+}
+
+function toggleAnnouncement(id, isActive) {
+    apiFetch('/api/announcements/' + id, {
+        method: 'PUT',
+        body: JSON.stringify({ is_active: isActive })
+    }).then(function(data) {
+        if (data && data.code === 200) {
+            showToast(isActive ? '已启用' : '已停用', 'success');
+            loadAnnouncements();
+        } else { showToast('操作失败', 'warn'); }
+    });
+}
+
+function deleteAnnouncement(id) {
+    if (!confirm('确定删除该公告?')) return;
+    apiFetch('/api/announcements/' + id, { method: 'DELETE' }).then(function(data) {
+        if (data && data.code === 200) {
+            showToast('已删除', 'success');
+            loadAnnouncements();
+        } else { showToast('删除失败', 'warn'); }
+    });
 }
 
 // --- 财神管理 ---
