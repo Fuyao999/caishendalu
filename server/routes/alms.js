@@ -197,7 +197,7 @@ router.post('/go', authMiddleware, async (req, res, next) => {
     const newMissStreak = isMiss ? p.alms_miss_streak + 1 : 0;
 
     await pool.query(
-      `UPDATE player_data SET gold = gold + ?, mana = mana - ?, daily_alms = daily_alms - 1, alms_miss_streak = ? WHERE user_id = ?`,
+      `UPDATE player_data SET gold = gold + ?, mana = mana - ?, daily_alms = daily_alms - 1, alms_miss_streak = ?, merit = merit + 5 WHERE user_id = ?`,
       [netGain, manaCost, newMissStreak, req.userId]
     );
 
@@ -221,6 +221,7 @@ router.post('/go', authMiddleware, async (req, res, next) => {
       remainAlms: p.daily_alms - 1,
       newGold: p.gold + netGain,
       newMana: p.mana - manaCost,
+      newMerit: (p.merit || 0) + 5,
       missStreak: newMissStreak,
     }, `${areaMeta.name}化缘 —— ${resultNames[resultKey]}！`);
 
