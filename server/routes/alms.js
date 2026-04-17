@@ -119,7 +119,7 @@ router.post('/go', authMiddleware, async (req, res, next) => {
     const isGamble = areaMeta.order >= 7;
 
     const [rows] = await pool.query(
-      `SELECT pd.gold, pd.mana, pd.daily_alms, pd.alms_miss_streak,
+      `SELECT pd.gold, pd.mana, pd.daily_alms, pd.alms_miss_streak, pd.merit,
               (SELECT COUNT(*) FROM logs WHERE user_id = ? AND action = 'alms' AND JSON_EXTRACT(detail, '$.area') = ?) AS area_visit_count
        FROM player_data pd WHERE pd.user_id = ?`,
       [req.userId, area, req.userId]
@@ -197,8 +197,8 @@ router.post('/go', authMiddleware, async (req, res, next) => {
     const newMissStreak = isMiss ? p.alms_miss_streak + 1 : 0;
 
     await pool.query(
-      `UPDATE player_data SET gold = gold + ?, mana = mana - ?, daily_alms = daily_alms - 1, alms_miss_streak = ?, merit = merit + 5 WHERE user_id = ?`,
-      [netGain, manaCost, newMissStreak, req.userId]
+      `UPDATE player_data SET gold = gold + ?, mana = mana - ?, daily_alms = daily_alms - 1, alms_miss_streak = ?, merit = merit + ? WHERE user_id = ?`,
+      [netGain, manaCost, newMissStreak, cfg.activeAlmsMerit || 5, req.userId]
     );
 
     await pool.query(
@@ -221,7 +221,7 @@ router.post('/go', authMiddleware, async (req, res, next) => {
       remainAlms: p.daily_alms - 1,
       newGold: p.gold + netGain,
       newMana: p.mana - manaCost,
-      newMerit: (p.merit || 0) + 5,
+      newMerit: (p.merit || 0) + (cfg.activeAlmsMerit || 5),
       missStreak: newMissStreak,
     }, `${areaMeta.name}化缘 —— ${resultNames[resultKey]}！`);
 

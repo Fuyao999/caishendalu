@@ -3268,11 +3268,17 @@ async function loadAlmsConfig() {
     container.innerHTML = `
         <div style="margin-bottom:20px">
             <h3 style="margin:0 0 15px 0;color:#f5a623">🌿 全局设置</h3>
-            <div style="display:grid;grid-template-columns:200px 200px;gap:12px;margin-bottom:20px">
+            <div style="display:grid;grid-template-columns:200px 200px 200px;gap:12px;margin-bottom:20px">
                 <div><label style="color:#aaa;font-size:13px">每日化缘次数</label><br>
                     <input type="number" id="ac-dailyAlms" value="${cfg.dailyAlms || 20}" style="width:100%;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
                 <div><label style="color:#aaa;font-size:13px">法力消耗/次</label><br>
                     <input type="number" id="ac-manaCost" value="${cfg.manaCost || 5}" style="width:100%;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
+                <div><label style="color:#aaa;font-size:13px">法力恢复/小时</label><br>
+                    <input type="number" id="ac-manaRegenPerHour" value="${cfg.manaRegenPerHour || 10}" style="width:100%;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
+                <div><label style="color:#aaa;font-size:13px">主动化缘功德</label><br>
+                    <input type="number" id="ac-activeAlmsMerit" value="${cfg.activeAlmsMerit || 5}" style="width:100%;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
+                <div><label style="color:#aaa;font-size:13px">被动化缘功德</label><br>
+                    <input type="number" id="ac-passiveAlmsMerit" value="${cfg.passiveAlmsMerit || 3}" style="width:100%;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
             </div>
         </div>
         <div style="margin-bottom:20px">
@@ -3382,6 +3388,9 @@ async function saveAlmsConfig() {
     const cfg = {
         dailyAlms: parseInt(get('ac-dailyAlms')) || 20,
         manaCost: parseInt(get('ac-manaCost')) || 5,
+        manaRegenPerHour: parseInt(get('ac-manaRegenPerHour')) || 10,
+        activeAlmsMerit: parseInt(get('ac-activeAlmsMerit')) || 5,
+        passiveAlmsMerit: parseInt(get('ac-passiveAlmsMerit')) || 3,
         safe: { lm: parseFloat(get('ac-safe-lm')) || 0.10, mm: parseFloat(get('ac-safe-mm')) || -0.30 },
         risk: { lm: parseFloat(get('ac-risk-lm')) || -0.10, mm: parseFloat(get('ac-risk-mm')) || 0.50 },
         mult: {

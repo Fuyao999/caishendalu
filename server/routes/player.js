@@ -7,6 +7,16 @@ const { success, fail, getRealm, expForLevel } = require('../utils/helpers');
 // GET /api/player/info - 获取玩家信息
 router.get('/info', authMiddleware, async (req, res, next) => {
   try {
+    // 读取化缘配置（用于法力恢复速度）
+    let manaRegenPerHour = 10;
+    try {
+      const [cfgRows] = await pool.query("SELECT config_value FROM game_config WHERE config_name = 'alms_config'");
+      if (cfgRows.length > 0) {
+        const cfg = typeof cfgRows[0].config_value === 'string' ? JSON.parse(cfgRows[0].config_value) : cfgRows[0].config_value;
+        manaRegenPerHour = cfg.manaRegenPerHour || 10;
+      }
+    } catch(e) { /* 用默认值 */ }
+
     const [rows] = await pool.query(
       `SELECT p.*, v.vip_level, v.monthly_card, v.total_recharge,
               p.invitation_code as invitationCode, p.invited_by as invitedBy
@@ -18,14 +28,17 @@ router.get('/info', authMiddleware, async (req, res, next) => {
 
     const player = rows[0];
 
-    // 计算离线法力恢复（10点/小时，上限100）
+    // 计算离线法力恢复（根据后台配置的恢复速度，上限100）
     if (player.last_update_time) {
       const elapsed = Date.now() - new Date(player.last_update_time).getTime();
-      const manaRecovered = Math.floor(elapsed * 10 / 3600000);
+      const manaRecovered = Math.floor(elapsed * manaRegenPerHour / 3600000);
       player.mana = Math.min(100, Math.max(0, (player.mana || 0)) + manaRecovered);
       // 同时更新数据库
       await pool.query('UPDATE player_data SET mana=? WHERE user_id=?', [player.mana, req.user.userId]);
     }
+
+    // 返回法力恢复速度供客户端使用
+    player.manaRegenPerHour = manaRegenPerHour;
 
     return success(res, player);
   } catch(err) { next(err); }
