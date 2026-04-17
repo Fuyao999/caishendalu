@@ -196,14 +196,18 @@ router.post('/go', authMiddleware, async (req, res, next) => {
     const isMiss = resultKey === 'MS' || resultKey === 'L2';
     const newMissStreak = isMiss ? p.alms_miss_streak + 1 : 0;
 
+    // 主动化缘额外奖励：声望+1，JP/W2时碎片（JP+3，W2+5）
+    const repGain = 1;
+    const fragGain = resultKey === 'JP' ? 3 : resultKey === 'W2' ? 5 : 0;
+
     await pool.query(
-      `UPDATE player_data SET gold = gold + ?, mana = mana - ?, daily_alms = daily_alms - 1, alms_miss_streak = ?, merit = merit + ? WHERE user_id = ?`,
-      [netGain, manaCost, newMissStreak, cfg.activeAlmsMerit || 5, req.userId]
+      `UPDATE player_data SET gold = gold + ?, mana = mana - ?, daily_alms = daily_alms - 1, alms_miss_streak = ?, merit = merit + ?, reputation = reputation + ?, fragments = fragments + ? WHERE user_id = ?`,
+      [netGain, manaCost, newMissStreak, cfg.activeAlmsMerit || 5, repGain, fragGain, req.userId]
     );
 
     await pool.query(
       'INSERT INTO logs (user_id, action, detail) VALUES (?, ?, ?)',
-      [req.userId, 'alms', JSON.stringify({ area, mode: safeOrRisk, result: resultKey, netGain })]
+      [req.userId, 'alms', JSON.stringify({ area, mode: safeOrRisk, result: resultKey, netGain, repGain, fragGain })]
     );
 
     const resultNames = {
@@ -222,6 +226,10 @@ router.post('/go', authMiddleware, async (req, res, next) => {
       newGold: p.gold + netGain,
       newMana: p.mana - manaCost,
       newMerit: (p.merit || 0) + (cfg.activeAlmsMerit || 5),
+      newReputation: (p.reputation || 0) + repGain,
+      newFragments: (p.fragments || 0) + fragGain,
+      fragGain: fragGain,
+      fragBonus: fragGain > 0,
       missStreak: newMissStreak,
     }, `${areaMeta.name}化缘 —— ${resultNames[resultKey]}！`);
 
@@ -254,5 +262,164 @@ function rollResult(probTable) {
   }
   return Object.keys(probTable).pop();
 }
+
+// ============================================
+// 被动化缘相关（待云游大厅完善后对接）
+// ============================================
+
+// 被动化缘 API
+router.post('/passive', authMiddleware, async (req, res, next) => {
+  try {
+    const { targetPlayerId } = req.body;
+    if (!targetPlayerId) return fail(res, '请选择要化缘的目标');
+
+    const userId = req.user.userId;
+
+    // 获取化缘者(A)数据
+    const [almserRows] = await pool.query(
+      `SELECT pd.user_id, pd.player_id, pd.gold, pd.temple_level, pd.level, pd.reputation,
+              pd.temple_storage, pd.be_alms_count, pd.shield_end_at
+       FROM player_data pd WHERE pd.user_id = ?`,
+      [userId]
+    );
+    if (almserRows.length === 0) return fail(res, '玩家数据不存在');
+    const almser = almserRows[0];
+
+    // 检查化缘者是否有护盾
+    const now = Date.now();
+    if (almser.shield_end_at && almser.shield_end_at > now) {
+      const remaining = Math.ceil((almser.shield_end_at - now) / 1000 / 60);
+      return fail(res, `护盾中，还剩${remaining}分钟无法被化缘`);
+    }
+
+    // 获取被化缘者(B)数据
+    const [targetRows] = await pool.query(
+      `SELECT user_id, player_id, nickname, gold, temple_level, level, reputation,
+              temple_storage, faith, fragments, be_alms_count, shield_end_at
+       FROM player_data WHERE player_id = ?`,
+      [targetPlayerId]
+    );
+    if (targetRows.length === 0) return fail(res, '目标玩家不存在');
+    const target = targetRows[0];
+
+    // 不能自己化缘自己
+    if (target.user_id === userId) return fail(res, '不能化缘自己');
+
+    // 计算被化缘者(B)的存储上限
+    const storageLimit = 20 + (target.temple_level || 1) * 10;
+
+    // 声誉加成 = floor(化缘者声望 / 10)
+    const reputationBonus = Math.floor(almser.reputation / 10);
+
+    // 基础上限（按化缘者庙宇等级）
+    const baseLimits = { 1: 30, 2: 50, 3: 80, 4: 120, 5: 180 };
+    const baseLimit = baseLimits[almser.temple_level] || 30;
+
+    // 等级差系数 = 1 + (被化缘者等级 - 化缘者等级) * 0.1
+    const levelDiffCoeff = 1 + (target.level - almser.level) * 0.1;
+
+    // 储量系数 = min(被化缘者庙宇存储 / 存储上限, 2.0)
+    const storageRatio = target.temple_storage > 0
+      ? Math.min(target.temple_storage / storageLimit, 2.0)
+      : 0;
+
+    // 化缘金额 = floor(基础上限 * 等级差系数 * 储量系数 + 声誉加成)
+    const almsAmount = Math.max(0, Math.floor(baseLimit * levelDiffCoeff * storageRatio + reputationBonus));
+
+    // 被化缘者扣钱
+    if (target.temple_storage < almsAmount) {
+      // 钱不够，只扣剩余的
+      const actualAlms = target.temple_storage;
+      await pool.query(
+        `UPDATE player_data SET temple_storage = 0 WHERE player_id = ?`,
+        [targetPlayerId]
+      );
+      await pool.query(
+        `UPDATE player_data SET gold = gold + ? WHERE user_id = ?`,
+        [actualAlms, userId]
+      );
+    } else {
+      // 正常扣
+      await pool.query(
+        `UPDATE player_data SET temple_storage = temple_storage - ? WHERE player_id = ?`,
+        [almsAmount, targetPlayerId]
+      );
+      await pool.query(
+        `UPDATE player_data SET gold = gold + ? WHERE user_id = ?`,
+        [almsAmount, userId]
+      );
+    }
+
+    // 被化缘者获得奖励
+    await pool.query(
+      `UPDATE player_data
+       SET faith = faith + 1,
+           reputation = reputation + 2,
+           fragments = fragments + 1,
+           be_alms_count = be_alms_count + 1
+       WHERE player_id = ?`,
+      [targetPlayerId]
+    );
+
+    // 检查是否需要开启护盾（被化缘满3次）
+    const newBeAlmsCount = target.be_alms_count + 1;
+    const shieldActivated = newBeAlmsCount >= 3;
+    let newShieldEndAt = target.shield_end_at;
+    if (shieldActivated && (!target.shield_end_at || target.shield_end_at <= now)) {
+      newShieldEndAt = now + 3600000; // 1小时
+      await pool.query(
+        `UPDATE player_data SET shield_end_at = ? WHERE player_id = ?`,
+        [newShieldEndAt, targetPlayerId]
+      );
+    }
+
+    // 记录日志
+    await pool.query(
+      'INSERT INTO logs (user_id, action, detail) VALUES (?, ?, ?)',
+      [userId, 'passive_alms', JSON.stringify({
+        targetPlayerId,
+        targetName: target.nickname,
+        almsAmount,
+        rewards: { faith: 1, reputation: 2, fragments: 1, beAlmsCount: newBeAlmsCount },
+        shieldActivated
+      })]
+    );
+
+    return success(res, {
+      almsAmount,
+      newGold: almser.gold + almsAmount,
+      newTempleStorage: Math.max(0, target.temple_storage - almsAmount),
+      newFaith: target.faith + 1,
+      newReputation: target.reputation + 2,
+      newFragments: target.fragments + 1,
+      newBeAlmsCount,
+      shieldActivated,
+      shieldEndAt: newShieldEndAt,
+    }, `向${target.nickname}化缘成功！获得${almsAmount}香火钱`);
+
+  } catch (err) { next(err); }
+});
+
+// 获取玩家被化缘状态
+router.get('/passive-status', authMiddleware, async (req, res, next) => {
+  try {
+    const [rows] = await pool.query(
+      'SELECT be_alms_count, shield_end_at, faith FROM player_data WHERE user_id = ?',
+      [req.user.userId]
+    );
+    if (rows.length === 0) return fail(res, '玩家数据不存在');
+    const p = rows[0];
+    const now = Date.now();
+    const shieldActive = p.shield_end_at && p.shield_end_at > now;
+    const shieldRemaining = shieldActive ? Math.ceil((p.shield_end_at - now) / 1000 / 60) : 0;
+
+    return success(res, {
+      beAlmsCount: p.be_alms_count || 0,
+      shieldActive,
+      shieldRemaining,
+      faith: p.faith || 0,
+    }, '被动化缘状态');
+  } catch (err) { next(err); }
+});
 
 module.exports = router;
