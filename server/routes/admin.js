@@ -8,11 +8,23 @@ const { pool } = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
 const { success, fail } = require('../utils/helpers');
 
-// 管理员检查中间件
+// 管理员检查中间件（使用Authorization header）
 const adminCheck = async (req, res, next) => {
-  // 简易版：userId=1为超管，后续可改为角色表
-  if (req.userId !== 1) return fail(res, '无管理员权限', 403);
-  next();
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) {
+    return fail(res, '无权限', 403);
+  }
+  const token = auth.slice(7);
+  try {
+    const JWT_SECRET = process.env.JWT_SECRET || 'caishen_super_secret';
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.userId = decoded.userId;
+    req.user = { id: decoded.userId, username: decoded.username };
+    next();
+  } catch(e) {
+    return fail(res, '无效token', 403);
+  }
 };
 
 // GET /api/admin/dashboard - 数据概览
@@ -313,6 +325,32 @@ router.post('/items', authMiddleware, adminCheck, async (req, res, next) => {
       );
       return success(res, { id: result.insertId }, '物品创建成功');
     }
+  } catch (err) { next(err); }
+});
+
+// GET /api/admin/alms-config - 获取化缘数值配置
+router.get('/alms-config', authMiddleware, adminCheck, async (req, res, next) => {
+  try {
+    const [rows] = await pool.query(
+      "SELECT config_value FROM game_config WHERE config_name = 'alms_config'"
+    );
+    if (rows.length === 0) return fail(res, '化缘配置不存在');
+    const config = rows[0].config_value;
+    return success(res, typeof config === 'string' ? JSON.parse(config) : config, '化缘配置');
+  } catch (err) { next(err); }
+});
+
+// POST /api/admin/alms-config - 保存化缘数值配置
+router.post('/alms-config', authMiddleware, adminCheck, async (req, res, next) => {
+  try {
+    const config = req.body;
+    if (!config) return fail(res, '配置数据不能为空');
+    await pool.query(
+      "INSERT INTO game_config (config_name, config_value) VALUES ('alms_config', ?) " +
+      "ON DUPLICATE KEY UPDATE config_value = VALUES(config_value)",
+      [JSON.stringify(config)]
+    );
+    return success(res, null, '化缘配置保存成功');
   } catch (err) { next(err); }
 });
 

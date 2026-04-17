@@ -31,6 +31,8 @@ const marketRoutes    = require('./routes/market');
 const pvpRoutes       = require('./routes/pvp');
 const rechargeRoutes  = require('./routes/recharge');
 const eventRoutes     = require('./routes/events');
+const adminAuthRoutes = require('./routes/adminAuth');
+const adminRolesRoutes = require('./routes/adminRoles');
 const adminRoutes     = require('./routes/admin');
 const announcementRoutes = require('./routes/announcements');
 const deityRoutes     = require('./routes/deities');
@@ -40,6 +42,11 @@ const questRoutes     = require('./routes/quests');
 const decorationRoutes = require('./routes/decoration');
 const analyticsRoutes = require('./routes/analytics');
 const settingsRoutes  = require('./routes/settings');
+const inviteRoutes    = require('./routes/invite');
+const friendRoutes     = require('./routes/friend');
+const mailRoutes       = require('./routes/mail');
+const titleRoutes      = require('./routes/title');
+const decorRoutes      = require('./routes/decor');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -50,7 +57,22 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || 'http://localhost:8080',
+  origin: function(origin, callback) {
+    // 允许的 origins
+    const allowedOrigins = [
+      'http://localhost:8080',
+      'http://localhost:7456',
+      'http://localhost:3000',
+      'http://127.0.0.1:7456',
+      'http://127.0.0.1:3000'
+    ];
+    // 如果没有 origin（postman等）或在允许列表里，就通过
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 };
 app.use(cors(corsOptions));
@@ -84,6 +106,8 @@ app.use('/api/pvp',       pvpRoutes);
 app.use('/api/recharge',  rechargeRoutes);
 app.use('/api/events',    eventRoutes);
 app.use('/api/admin',     adminRoutes);
+app.use('/api/admin/auth', adminAuthRoutes);
+app.use('/api/admin/roles', adminRolesRoutes);
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/deities',   deityRoutes);
 app.use('/api/stories',   storyRoutes);
@@ -92,6 +116,11 @@ app.use('/api/quests',    questRoutes);
 app.use('/api/decoration', decorationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/settings',  settingsRoutes);
+app.use('/api/invite',    inviteRoutes);
+app.use('/api/friend',     friendRoutes);
+app.use('/api/mail',       mailRoutes);
+app.use('/api/title',      titleRoutes);
+app.use('/api/decor',      decorRoutes);
 
 // ==================== 健康检查 ====================
 app.get('/api/health', (req, res) => {

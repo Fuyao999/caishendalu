@@ -56,9 +56,10 @@ router.post('/register', async (req, res, next) => {
     
     // 创建玩家数据
     const playerNick = nickname || '无名散修';
+    const invitationCode = 'CS' + Math.random().toString(36).substring(2, 8).toUpperCase();
     await pool.query(
-      'INSERT INTO player_data (user_id, player_id, nickname, gold) VALUES (?, ?, ?, 2400)',
-      [userId, playerId, playerNick]
+      'INSERT INTO player_data (user_id, player_id, nickname, gold, invitation_code) VALUES (?, ?, ?, 2400, ?)',
+      [userId, playerId, playerNick, invitationCode]
     );
     
     // 创建VIP记录

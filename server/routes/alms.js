@@ -1,5 +1,6 @@
 // ============================================
 // 化缘路由 - 核心玩法（八卦区域化缘）
+// 所有数值从 game_config 表读取，支持后台动态配置
 // ============================================
 const express  = require('express');
 const router   = express.Router();
@@ -7,7 +8,7 @@ const { pool } = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
 const { success, fail } = require('../utils/helpers');
 
-// 区域配置
+// 区域配置（门槛等基本信息不频繁改动，暂存内存）
 const AREAS = {
   tianlu:  { name: '天禄', threshold: 100,    order: 1 },
   zhenyue: { name: '镇岳', threshold: 500,    order: 2 },
@@ -19,39 +20,84 @@ const AREAS = {
   liquan:  { name: '流泉', threshold: 99999,  order: 8 },
 };
 
-// 前6区概率表 (稳求 / 险求)
-const PROB_SAFE  = { JP: 0.10, BW: 0.25, NM: 0.35, SW: 0.20, MS: 0.10 };
-const PROB_RISKY = { JP: 0.20, BW: 0.15, NM: 0.20, SW: 0.20, MS: 0.25 };
-// 前6区倍率表
-const MULTI_SAFE  = { JP: 3.0, BW: 1.5, NM: 1.0, SW: 0.5, MS: 0.0 };
-const MULTI_RISKY = { JP: 5.0, BW: 2.0, NM: 1.0, SW: 0.3, MS: 0.0 };
-// 后2区概率（选择不影响结果——隐藏规则）
-const PROB_GAMBLE = { W2: 0.45, L2: 0.55 };
-const MULTI_GAMBLE = { W2: 2.0, L2: 0.0 };
+// 内存缓存（5秒过期）
+let _cfgCache = null;
+let _cfgCacheTime = 0;
+const CACHE_TTL = 5000;
+
+// 获取化缘配置（优先从缓存读取）
+async function getAlmsConfig() {
+  const now = Date.now();
+  if (_cfgCache && (now - _cfgCacheTime) < CACHE_TTL) {
+    return _cfgCache;
+  }
+  try {
+    const [rows] = await pool.query(
+      "SELECT config_value FROM game_config WHERE config_name = 'alms_config'"
+    );
+    if (rows.length === 0) throw new Error('化缘配置不存在');
+    let cfg = rows[0].config_value;
+    if (typeof cfg === 'string') cfg = JSON.parse(cfg);
+    _cfgCache = cfg;
+    _cfgCacheTime = now;
+    return cfg;
+  } catch (e) {
+    // 缓存失效时使用默认值
+    return getDefaultConfig();
+  }
+}
+
+function getDefaultConfig() {
+  return {
+    areas: {
+      tianlu:  { threshold: 100,  JP: 0.02, BW: 0.10, NM: 0.50, SW: 0.30, MS: 0.08 },
+      zhenyue: { threshold: 500,  JP: 0.03, BW: 0.12, NM: 0.40, SW: 0.30, MS: 0.15 },
+      longyin: { threshold: 1000, JP: 0.04, BW: 0.14, NM: 0.32, SW: 0.25, MS: 0.25 },
+      fuyao:   { threshold: 5000, JP: 0.05, BW: 0.15, NM: 0.25, SW: 0.20, MS: 0.35 },
+      nanming: { threshold: 10000,JP: 0.06, BW: 0.16, NM: 0.18, SW: 0.15, MS: 0.45 },
+      dibao:   { threshold: 50000,JP: 0.07, BW: 0.18, NM: 0.10, SW: 0.15, MS: 0.50 },
+      ganze:   { threshold: 77777 },
+      liquan:  { threshold: 99999 },
+    },
+    mult: { JP: 9.0, BW: 2.0, NM: 0.0, SW: -0.7, MS: -1.0 },
+    safe: { lm: 0.10, mm: -0.30 },
+    risk: { lm: -0.10, mm: 0.50 },
+    gamble: { W2: { prob: 0.45, mult: 1.98 }, L2: { prob: 0.55, mult: 0.0 } },
+    lossStreak: {
+      level3: { trigger: 3, MS_factor: 0.5 },
+      level5: { trigger: 5, MS: 0, SW: 0, NM: 0.50, BW: 0.35, JP: 0.15 }
+    },
+    dailyAlms: 20,
+    manaCost: 5
+  };
+}
 
 // GET /api/alms/status - 化缘状态
 router.get('/status', authMiddleware, async (req, res, next) => {
   try {
+    const cfg = await getAlmsConfig();
     const [rows] = await pool.query(
-      'SELECT gold, daily_alms, alms_miss_streak, level FROM player_data WHERE user_id = ?',
+      'SELECT gold, mana, daily_alms, alms_miss_streak FROM player_data WHERE user_id = ?',
       [req.userId]
     );
     if (rows.length === 0) return fail(res, '玩家数据不存在');
     const p = rows[0];
 
-    // 计算解锁的区域
     const unlocked = {};
-    for (const [id, cfg] of Object.entries(AREAS)) {
+    for (const [id, areaMeta] of Object.entries(AREAS)) {
+      const cfgThreshold = cfg.areas[id]?.threshold ?? areaMeta.threshold;
       unlocked[id] = {
-        ...cfg,
-        unlocked: p.gold >= cfg.threshold,
-        threshold: cfg.threshold
+        name: areaMeta.name,
+        threshold: cfgThreshold,
+        order: areaMeta.order,
+        unlocked: p.gold >= cfgThreshold,
       };
     }
 
     return success(res, {
       dailyAlms: p.daily_alms,
       gold: p.gold,
+      mana: p.mana,
       missStreak: p.alms_miss_streak,
       areas: unlocked,
     }, '化缘状态');
@@ -61,106 +107,122 @@ router.get('/status', authMiddleware, async (req, res, next) => {
 // POST /api/alms/go - 执行化缘
 router.post('/go', authMiddleware, async (req, res, next) => {
   try {
-    const { area, mode } = req.body; // mode: 'safe' | 'risky'
+    const { area, mode, choice } = req.body;
+    const safeOrRisk = mode || choice; // 兼容 HTML 和 Cocos
+    const cfg = await getAlmsConfig();
+
     if (!area || !AREAS[area]) return fail(res, '无效的区域');
-    if (!['safe', 'risky'].includes(mode)) return fail(res, '请选择稳求或险求');
+    if (!['safe', 'risk', 'risky'].includes(safeOrRisk)) return fail(res, '请选择稳求或险求');
 
-    const cfg = AREAS[area];
-    const isGamble = cfg.order >= 7; // 甘泽/流泉是赌博区
+    const areaMeta = AREAS[area]; // 保留 name/order 等元数据
+    const areaThreshold = cfg.areas[area]?.threshold ?? areaMeta.threshold; // 门槛优先读配置
+    const isGamble = areaMeta.order >= 7;
 
-    // 查玩家数据
     const [rows] = await pool.query(
-      'SELECT gold, mana, daily_alms, alms_miss_streak FROM player_data WHERE user_id = ?',
-      [req.userId]
+      `SELECT pd.gold, pd.mana, pd.daily_alms, pd.alms_miss_streak,
+              (SELECT COUNT(*) FROM logs WHERE user_id = ? AND action = 'alms' AND JSON_EXTRACT(detail, '$.area') = ?) AS area_visit_count
+       FROM player_data pd WHERE pd.user_id = ?`,
+      [req.userId, area, req.userId]
     );
     if (rows.length === 0) return fail(res, '玩家数据不存在');
     const p = rows[0];
 
-    const MANA_COST = 5;
-    if (p.daily_alms <= 0) return fail(res, '今日化缘次数已用完');
-    if (p.mana < MANA_COST) return fail(res, `法力不足${MANA_COST}点，无法化缘`);
-    if (p.gold < cfg.threshold) return fail(res, `金币不足 ${cfg.threshold}，无法进入${cfg.name}`);
+    const manaCost = cfg.manaCost || 5;
+    const dailyAlms = cfg.dailyAlms || 20;
 
-    // 投入金额（门槛的10%）
-    const stake = Math.floor(cfg.threshold * 0.1);
-    if (p.gold < stake) return fail(res, `金币不足以投入 ${stake}`);
+    if (p.daily_alms <= 0) return fail(res, `今日化缘次数已用完（${dailyAlms}次）`);
+    if (p.mana < manaCost) return fail(res, `法力不足${manaCost}点，无法化缘`);
+    if (p.gold < areaThreshold) return fail(res, `香火钱不足，无法进入${areaMeta.name}`);
 
-    // 计算结果
-    let resultKey, multiplier, probTable;
+    let resultKey, netGain;
 
     if (isGamble) {
-      // 后2区：红黑对赌，选择不影响结果
-      probTable = PROB_GAMBLE;
-      resultKey = rollResult(probTable);
-      multiplier = MULTI_GAMBLE[resultKey];
+      // 后2区：红黑对赌
+      const gamble = cfg.gamble;
+      if (!gamble || !gamble.W2 || !gamble.L2) {
+        console.error('化缘配置错误: gamble config missing:', JSON.stringify(gamble));
+        return fail(res, '化缘配置错误');
+      }
+      const rand = Math.random();
+      resultKey = rand < gamble.W2.prob ? 'W2' : 'L2';
+      const mult = resultKey === 'W2' ? gamble.W2.mult : gamble.L2.mult;
+      netGain = resultKey === 'W2' ? Math.floor(areaThreshold * mult) : -areaThreshold;
     } else {
-      // 前6区
-      probTable = mode === 'safe' ? PROB_SAFE : PROB_RISKY;
+      // 前6区：概率调整 + 抽签
+      const areaData = cfg.areas[area];
+      if (!areaData) return fail(res, '区域概率配置错误');
+      // 提取概率（排除 threshold）
+      const baseProb = {JP: areaData.JP, BW: areaData.BW, NM: areaData.NM, SW: areaData.SW, MS: areaData.MS};
 
-      // 连亏保护
-      let adjustedProb = { ...probTable };
-      if (p.alms_miss_streak >= 5) {
-        // 5次连亏保底NM以上
-        adjustedProb.MS = 0;
-        adjustedProb.SW = 0;
-        adjustedProb.NM = 0.50;
-        adjustedProb.BW = 0.35;
-        adjustedProb.JP = 0.15;
-      } else if (p.alms_miss_streak >= 3) {
-        // 3次连亏降低MS概率
-        adjustedProb.MS = Math.max(0.02, adjustedProb.MS - 0.08);
-        adjustedProb.NM += 0.08;
+      const modeCfg = safeOrRisk === 'safe' ? cfg.safe : cfg.risk;
+      const lm = modeCfg.lm;
+      let a = {};
+      for (const k in baseProb) {
+        a[k] = k === 'MS' ? baseProb[k] * (1 - lm) : baseProb[k] * (1 + lm);
       }
 
-      resultKey = rollResult(adjustedProb);
-      multiplier = (mode === 'safe' ? MULTI_SAFE : MULTI_RISKY)[resultKey];
+      // 连亏保护
+      const ls = cfg.lossStreak;
+      if (p.alms_miss_streak >= ls.level5.trigger) {
+        a.MS = ls.level5.MS;
+        a.SW = ls.level5.SW;
+        a.NM = ls.level5.NM;
+        a.BW = ls.level5.BW;
+        a.JP = ls.level5.JP;
+      } else if (p.alms_miss_streak >= ls.level3.trigger) {
+        a.MS *= ls.level3.MS_factor;
+        a.NM += ls.level3.MS_factor * 0.16; // 补回概率
+      }
+
+      // 首访保护
+      if (!p.area_visit_count || p.area_visit_count === 0) {
+        a.MS = 0;
+        a.SW = 0;
+      }
+
+      // 归一化
+      let tot = 0;
+      for (const k in a) tot += a[k];
+      for (const k in a) a[k] = Math.max(0.001, a[k] / tot);
+
+      // 抽签
+      resultKey = rollResult(a);
+
+      // 计算倍率
+      const mult = cfg.mult[resultKey] * (1 + modeCfg.mm);
+      netGain = Math.floor(areaThreshold * mult);
     }
 
-    // 计算收益
-    const payout = Math.floor(stake * multiplier);
-    const netGain = payout - stake;
     const isMiss = resultKey === 'MS' || resultKey === 'L2';
     const newMissStreak = isMiss ? p.alms_miss_streak + 1 : 0;
 
-    // 更新数据库
     await pool.query(
-      `UPDATE player_data SET
-        gold = gold + ?,
-        mana = mana - ?,
-        daily_alms = daily_alms - 1,
-        alms_miss_streak = ?
-       WHERE user_id = ?`,
-      [netGain, MANA_COST, newMissStreak, req.userId]
+      `UPDATE player_data SET gold = gold + ?, mana = mana - ?, daily_alms = daily_alms - 1, alms_miss_streak = ? WHERE user_id = ?`,
+      [netGain, manaCost, newMissStreak, req.userId]
     );
 
-    // 记日志
     await pool.query(
       'INSERT INTO logs (user_id, action, detail) VALUES (?, ?, ?)',
-      [req.userId, 'alms', JSON.stringify({
-        area, mode, result: resultKey, stake, payout, netGain
-      })]
+      [req.userId, 'alms', JSON.stringify({ area, mode: safeOrRisk, result: resultKey, netGain })]
     );
 
-    // 结果名称映射
     const resultNames = {
-      JP: '大吉', BW: '小吉', NM: '平', SW: '小亏', MS: '大凶',
-      W2: '吉', L2: '凶'
+      JP: '大吉大利', BW: '欧皇降临', NM: '平安顺遂', SW: '破财消灾', MS: '非酋本酋',
+      W2: '大吉大利', L2: '非酋本酋'
     };
 
     return success(res, {
-      area: cfg.name,
+      area: areaMeta.name,
       areaId: area,
-      mode,
+      mode: safeOrRisk,
       result: resultKey,
       resultName: resultNames[resultKey],
-      stake,
-      payout,
       netGain,
       remainAlms: p.daily_alms - 1,
       newGold: p.gold + netGain,
-      newMana: p.mana - MANA_COST,
+      newMana: p.mana - manaCost,
       missStreak: newMissStreak,
-    }, `${cfg.name}化缘 —— ${resultNames[resultKey]}！`);
+    }, `${areaMeta.name}化缘 —— ${resultNames[resultKey]}！`);
 
   } catch (err) { next(err); }
 });
@@ -170,9 +232,7 @@ router.get('/history', authMiddleware, async (req, res, next) => {
   try {
     const { limit = 20 } = req.query;
     const [rows] = await pool.query(
-      `SELECT detail, created_at FROM logs
-       WHERE user_id = ? AND action = 'alms'
-       ORDER BY created_at DESC LIMIT ?`,
+      `SELECT detail, created_at FROM logs WHERE user_id = ? AND action = 'alms' ORDER BY created_at DESC LIMIT ?`,
       [req.userId, parseInt(limit)]
     );
     const history = rows.map(r => ({
@@ -191,7 +251,6 @@ function rollResult(probTable) {
     cumulative += prob;
     if (rand <= cumulative) return key;
   }
-  // 兜底返回最后一个
   return Object.keys(probTable).pop();
 }
 

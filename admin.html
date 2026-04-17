@@ -290,15 +290,11 @@
             <h2 style="color:#f5a623;margin-bottom:8px">财神大陆</h2>
             <p style="color:#888;font-size:13px;margin-bottom:24px">管理后台 v2.0</p>
             <div style="margin-bottom:12px">
-                <input type="text" id="admin-username" placeholder="用户名" value="testuser"
+                <input type="text" id="admin-username" placeholder="用户名" value=""
                     style="width:100%;padding:10px 14px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:8px;font-size:14px;box-sizing:border-box">
             </div>
             <div style="margin-bottom:12px">
-                <input type="password" id="admin-password" placeholder="密码" value="123456"
-                    style="width:100%;padding:10px 14px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:8px;font-size:14px;box-sizing:border-box">
-            </div>
-            <div style="margin-bottom:12px">
-                <input type="text" id="api-base-input" placeholder="API地址" value="http://localhost:3000"
+                <input type="password" id="admin-password" placeholder="密码" value=""
                     style="width:100%;padding:10px 14px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:8px;font-size:14px;box-sizing:border-box">
             </div>
             <button onclick="adminLogin()" style="width:100%;padding:12px;background:linear-gradient(135deg,#f5a623,#e6951e);color:#000;border:none;border-radius:8px;font-size:15px;font-weight:bold;cursor:pointer">
@@ -358,6 +354,15 @@
                 <li onclick="showPage('settings')">
                     <i>⚙️</i><span>系统设置</span>
                 </li>
+                <li onclick="showPage('adminroles')">
+                    <i>👥</i><span>角色管理</span>
+                </li>
+                <li onclick="showPage('adminusers')">
+                    <i>🔐</i><span>管理员</span>
+                </li>
+                <li onclick="showChangePasswordModal()">
+                    <i>🔑</i><span>改密码</span>
+                </li>
                 <!-- ===== 新增页面 ===== -->
                 <li style="border-top:1px solid rgba(255,255,255,0.1);margin:8px 0;padding:0"></li>
                 <li onclick="showPage('buffdebug')"><span>🔧 加成调试</span></li>
@@ -372,6 +377,7 @@
                 <li onclick="showPage('domains')"><span>🌍 财域管理</span></li>
                 <li onclick="showPage('quests')"><span>🏆 任务成就</span></li>
                 <li onclick="showPage('decoration')"><span>🎨 装修管理</span></li>
+                <li onclick="showPage('almsconfig')"><span>💰 化缘数值</span></li>
 
             </ul>
         </aside>
@@ -1153,6 +1159,30 @@
             </div>
         
 
+            <!-- 👥 角色管理页面 -->
+            <div id="adminroles" class="page" style="display:none">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <h2 style="margin:0">👥 角色管理</h2>
+                    <button class="btn btn-primary" onclick="showAddRoleModal()">+ 新增角色</button>
+                </div>
+                <table>
+                    <thead><tr><th>ID</th><th>角色名</th><th>权限</th><th>操作</th></tr></thead>
+                    <tbody id="roles-tbody"></tbody>
+                </table>
+            </div>
+
+            <!-- 🔐 管理员管理页面 -->
+            <div id="adminusers" class="page" style="display:none">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <h2 style="margin:0">🔐 管理员</h2>
+                    <button class="btn btn-primary" onclick="showAddAdminUserModal()">+ 新增管理员</button>
+                </div>
+                <table>
+                    <thead><tr><th>ID</th><th>用户名</th><th>角色</th><th>创建时间</th><th>操作</th></tr></thead>
+                    <tbody id="adminusers-tbody"></tbody>
+                </table>
+            </div>
+
             <!-- 📊 埋点管理页面 -->
             <div id="analytics" class="page" style="display:none">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
@@ -1593,6 +1623,14 @@
                 </div>
             </div>
 
+            <!-- 💰 数值管理 - 化缘数值 -->
+            <div id="almsconfig" class="page" style="display:none">
+                <h2 style="margin:0 0 20px 0">💰 数值管理 - 化缘数值</h2>
+                <div id="almsconfig-form" style="background:#2a2a2a;border-radius:8px;padding:20px">
+                    <div id="almsconfig-loading" style="text-align:center;color:#888;padding:40px">加载中...</div>
+                </div>
+            </div>
+
             </main>
     </div>
     <!-- ===== 通用模态框 ===== -->
@@ -1644,6 +1682,35 @@
         document.getElementById('globalModal').addEventListener('click', function(e) {
             if (e.target === this) closeGlobalModal();
         });
+
+        // ===== 修改密码 =====
+        function showChangePasswordModal() {
+            var body = '<div style="padding:10px 0">' +
+                '<p style="margin-bottom:15px">请输入旧密码和新密码</p>' +
+                '<input type="password" id="cpOld" placeholder="旧密码" style="width:100%;padding:10px;margin-bottom:10px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:8px;box-sizing:border-box">' +
+                '<input type="password" id="cpNew" placeholder="新密码" style="width:100%;padding:10px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:8px;box-sizing:border-box">' +
+                '</div>';
+            var footer = '<button class="btn" onclick="closeGlobalModal()" style="background:#34495e;margin-right:10px">取消</button>' +
+                '<button class="btn btn-primary" onclick="doChangePassword()">确认修改</button>';
+            showGlobalModal('🔑 修改密码', body, footer);
+        }
+
+        async function doChangePassword() {
+            var oldPw = document.getElementById('cpOld').value;
+            var newPw = document.getElementById('cpNew').value;
+            if (!oldPw || !newPw) { showToast('请填写完整', 'warn'); return; }
+            if (newPw.length < 6) { showToast('新密码至少6位', 'warn'); return; }
+            var data = await apiFetch('/api/admin/auth/change-password', {
+                method: 'POST',
+                body: JSON.stringify({ oldPassword: oldPw, newPassword: newPw })
+            });
+            if (data && data.code === 200) {
+                showToast('密码修改成功', 'success');
+                closeGlobalModal();
+            } else {
+                showToast(data.message || '修改失败', 'error');
+            }
+        }
 
         // ===== 确认弹窗 =====
         function showConfirm(title, msg, onYes) {
@@ -1720,7 +1787,12 @@
             // ===== Dashboard页面 =====
             if (page === 'dashboard') {
                 if (text === '退出') {
-                    showConfirm('退出确认', '确定要退出管理后台吗？', function(){ showToast('已退出登录','success'); });
+                    showConfirm('退出确认', '确定要退出管理后台吗？', function(){
+                        ADMIN_TOKEN = '';
+                        localStorage.removeItem('admin_token');
+                        document.getElementById('login-overlay').style.display = 'flex';
+                        showToast('已退出登录','success');
+                    });
                     return;
                 }
                 // 系统状态表格的查看/管理按钮 → 跳转对应页面
@@ -2388,13 +2460,12 @@
         async function adminLogin() {
             const username = document.getElementById('admin-username').value;
             const password = document.getElementById('admin-password').value;
-            API_BASE = document.getElementById('api-base-input').value.replace(/\/$/, '');
             localStorage.setItem('admin_api_base', API_BASE);
 
             const errEl = document.getElementById('login-error');
             errEl.style.display = 'none';
 
-            const data = await apiFetch('/api/auth/login', {
+            const data = await apiFetch('/api/admin/auth/login', {
                 method: 'POST',
                 body: JSON.stringify({ username, password })
             });
@@ -2882,14 +2953,17 @@ async function loadAntiCheat(page = 1) {
                 case 'pvp': loadPvp(); break;
                 case 'events': loadEvents(); break;
                 case 'anticheat': loadAntiCheat(); break;
-                case 'buffdebug': break;
+                case 'buffdebug': if(typeof loadBuffDebug==='function') loadBuffDebug(); break;
                 case 'announcements': loadAnnouncements(); break;
                 case 'deities': loadDeities(); break;
                 case 'stories': loadStories(); break;
                 case 'domains': loadDomains(); break;
                 case 'quests': loadQuests(); break;
                 case 'decoration': loadDecoration(); break;
+                case 'almsconfig': loadAlmsConfig(); break;
                 case 'analytics': loadAnalytics(); break;
+                case 'adminroles': loadAdminRoles(); break;
+                case 'adminusers': loadAdminUsers(); break;
                 case 'settings': loadSettings(); break;
             }
         }
@@ -3180,6 +3254,181 @@ async function loadQuests() {
 }
 
 // --- 装修管理 ---
+// --- 化缘数值管理 ---
+async function loadAlmsConfig() {
+    const container = document.getElementById('almsconfig-form');
+    if (!container) return;
+    container.innerHTML = '<div style="text-align:center;color:#888;padding:40px">加载中...</div>';
+    const data = await apiFetch('/api/admin/alms-config');
+    if (!data || data.code !== 200) {
+        container.innerHTML = '<div style="color:#e74c3c;padding:20px">加载失败: ' + (data?.message || '未知错误') + '</div>';
+        return;
+    }
+    const cfg = data.data;
+    container.innerHTML = `
+        <div style="margin-bottom:20px">
+            <h3 style="margin:0 0 15px 0;color:#f5a623">🌿 全局设置</h3>
+            <div style="display:grid;grid-template-columns:200px 200px;gap:12px;margin-bottom:20px">
+                <div><label style="color:#aaa;font-size:13px">每日化缘次数</label><br>
+                    <input type="number" id="ac-dailyAlms" value="${cfg.dailyAlms || 20}" style="width:100%;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
+                <div><label style="color:#aaa;font-size:13px">法力消耗/次</label><br>
+                    <input type="number" id="ac-manaCost" value="${cfg.manaCost || 5}" style="width:100%;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
+            </div>
+        </div>
+        <div style="margin-bottom:20px">
+            <h3 style="margin:0 0 15px 0;color:#f5a623">⚖️ 稳求系数（safe）</h3>
+            <div style="display:grid;grid-template-columns:200px 200px;gap:12px;margin-bottom:20px">
+                <div><label style="color:#aaa;font-size:13px">LM（MS概率系数）</label><br>
+                    <input type="number" step="0.01" id="ac-safe-lm" value="${cfg.safe?.lm ?? 0.10}" style="width:100%;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
+                <div><label style="color:#aaa;font-size:13px">MM（倍率系数）</label><br>
+                    <input type="number" step="0.01" id="ac-safe-mm" value="${cfg.safe?.mm ?? -0.30}" style="width:100%;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
+            </div>
+        </div>
+        <div style="margin-bottom:20px">
+            <h3 style="margin:0 0 15px 0;color:#e74c3c">🎲 险求系数（risk）</h3>
+            <div style="display:grid;grid-template-columns:200px 200px;gap:12px;margin-bottom:20px">
+                <div><label style="color:#aaa;font-size:13px">LM（MS概率系数）</label><br>
+                    <input type="number" step="0.01" id="ac-risk-lm" value="${cfg.risk?.lm ?? -0.10}" style="width:100%;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
+                <div><label style="color:#aaa;font-size:13px">MM（倍率系数）</label><br>
+                    <input type="number" step="0.01" id="ac-risk-mm" value="${cfg.risk?.mm ?? 0.50}" style="width:100%;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
+            </div>
+        </div>
+        <div style="margin-bottom:20px">
+            <h3 style="margin:0 0 15px 0;color:#f5a623">💎 基准倍率（mult）</h3>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px">
+                ${['JP','BW','NM','SW','MS'].map(k => `
+                <div><label style="color:#aaa;font-size:13px">${k}</label><br>
+                    <input type="number" step="0.1" id="ac-mult-${k}" value="${cfg.mult?.[k] ?? (k==='JP'?9:k==='BW'?2:k==='NM'?0:k==='SW'?-0.7:-1)}" style="width:100%;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
+                `).join('')}
+            </div>
+        </div>
+        <div style="margin-bottom:20px">
+            <h3 style="margin:0 0 15px 0;color:#f5a623">🎰 后2区（甘泽/流泉）</h3>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">
+                <div><label style="color:#aaa;font-size:13px">W2概率</label><br>
+                    <input type="number" step="0.01" id="ac-gamble-W2-prob" value="${cfg.gamble?.W2?.prob ?? 0.45}" style="width:100%;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
+                <div><label style="color:#aaa;font-size:13px">W2倍率</label><br>
+                    <input type="number" step="0.01" id="ac-gamble-W2-mult" value="${cfg.gamble?.W2?.mult ?? 1.98}" style="width:100%;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
+                <div><label style="color:#aaa;font-size:13px">L2概率</label><br>
+                    <input type="number" step="0.01" id="ac-gamble-L2-prob" value="${cfg.gamble?.L2?.prob ?? 0.55}" style="width:100%;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
+                <div><label style="color:#aaa;font-size:13px">L2倍率</label><br>
+                    <input type="number" step="0.01" id="ac-gamble-L2-mult" value="${cfg.gamble?.L2?.mult ?? 0}" style="width:100%;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
+            </div>
+        </div>
+        <div style="margin-bottom:20px">
+            <h3 style="margin:0 0 15px 0;color:#f5a623">🛡️ 连亏保护</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+                <div style="background:#1a1a2e;border-radius:8px;padding:15px">
+                    <div style="color:#f5a623;margin-bottom:10px">3次连亏触发</div>
+                    <div><label style="color:#aaa;font-size:13px">MS概率系数</label><br>
+                        <input type="number" step="0.01" id="ac-ls3-ms_factor" value="${cfg.lossStreak?.level3?.MS_factor ?? 0.5}" style="width:100%;padding:8px;background:#2a2a2a;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
+                </div>
+                <div style="background:#1a1a2e;border-radius:8px;padding:15px">
+                    <div style="color:#e74c3c;margin-bottom:10px">5次连亏触发（保底）</div>
+                    ${['JP','BW','NM','SW','MS'].map(k => `
+                    <div style="margin-top:6px"><label style="color:#aaa;font-size:13px">${k}</label><br>
+                        <input type="number" step="0.01" id="ac-ls5-${k}" value="${cfg.lossStreak?.level5?.[k] ?? (k==='MS'?0:k==='SW'?0:k==='NM'?0.50:k==='BW'?0.35:k==='JP'?0.15:0)}" style="width:100%;padding:8px;background:#2a2a2a;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+        <div style="margin-bottom:20px">
+            <h3 style="margin:0 0 15px 0;color:#f5a623">🎯 前6区基准概率（各区域独立配置）</h3>
+            <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;background:#1a1a2e;border-radius:8px">
+                <thead>
+                    <tr style="background:#333">
+                        <th style="padding:10px;color:#f5a623;text-align:left">区域</th>
+                        <th style="padding:10px;color:#f5a623">门槛</th>
+                        <th style="padding:10px;color:#f5a623">JP</th>
+                        <th style="padding:10px;color:#f5a623">BW</th>
+                        <th style="padding:10px;color:#f5a623">NM</th>
+                        <th style="padding:10px;color:#f5a623">SW</th>
+                        <th style="padding:10px;color:#f5a623">MS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${['tianlu','zhenyue','longyin','fuyao','nanming','dibao'].map(id => {
+                        const names = {tianlu:'天禄',zhenyue:'镇岳',longyin:'龙吟',fuyao:'扶摇',nanming:'南明',dibao:'地宝'};
+                        const a = cfg.areas?.[id] || {};
+                        return `<tr>
+                            <td style="padding:10px;color:#fff">${names[id]}</td>
+                            <td><input type="number" id="ac-area-${id}-threshold" value="${a.threshold || 0}" style="width:80px;padding:6px;background:#2a2a2a;border:1px solid #444;color:#fff;border-radius:4px"></td>
+                            ${['JP','BW','NM','SW','MS'].map(k => `
+                                <td><input type="number" step="0.01" id="ac-area-${id}-${k}" value="${a[k] ?? 0}" style="width:70px;padding:6px;background:#2a2a2a;border:1px solid #444;color:#fff;border-radius:4px"></td>
+                            `).join('')}
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+            </div>
+            <h3 style="margin:20px 0 15px 0;color:#f5a623">🎰 后2区（甘泽/流泉）门槛</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div><label style="color:#aaa;font-size:13px">甘泽</label><br>
+                    <input type="number" id="ac-area-ganze-threshold" value="${cfg.areas?.ganze?.threshold || 77777}" style="width:100%;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
+                <div><label style="color:#aaa;font-size:13px">流泉</label><br>
+                    <input type="number" id="ac-area-liquan-threshold" value="${cfg.areas?.liquan?.threshold || 99999}" style="width:100%;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
+            </div>
+        </div>
+        <div style="margin-top:20px;padding-top:20px;border-top:1px solid #444">
+            <button onclick="saveAlmsConfig()" style="padding:12px 32px;background:#f5a623;color:#000;border:none;border-radius:8px;cursor:pointer;font-size:15px;font-weight:bold">💾 保存配置</button>
+            <span id="ac-msg" style="margin-left:16px;color:#888"></span>
+        </div>
+    `;
+}
+
+async function saveAlmsConfig() {
+    const get = id => document.getElementById(id)?.value;
+    const cfg = {
+        dailyAlms: parseInt(get('ac-dailyAlms')) || 20,
+        manaCost: parseInt(get('ac-manaCost')) || 5,
+        safe: { lm: parseFloat(get('ac-safe-lm')) || 0.10, mm: parseFloat(get('ac-safe-mm')) || -0.30 },
+        risk: { lm: parseFloat(get('ac-risk-lm')) || -0.10, mm: parseFloat(get('ac-risk-mm')) || 0.50 },
+        mult: {
+            JP: parseFloat(get('ac-mult-JP')) || 9.0,
+            BW: parseFloat(get('ac-mult-BW')) || 2.0,
+            NM: parseFloat(get('ac-mult-NM')) || 0.0,
+            SW: parseFloat(get('ac-mult-SW')) || -0.7,
+            MS: parseFloat(get('ac-mult-MS')) || -1.0
+        },
+        gamble: {
+            W2: { prob: parseFloat(get('ac-gamble-W2-prob')) || 0.45, mult: parseFloat(get('ac-gamble-W2-mult')) || 1.98 },
+            L2: { prob: parseFloat(get('ac-gamble-L2-prob')) || 0.55, mult: parseFloat(get('ac-gamble-L2-mult')) || 0 }
+        },
+        lossStreak: {
+            level3: { trigger: 3, MS_factor: parseFloat(get('ac-ls3-ms_factor')) || 0.5 },
+            level5: { trigger: 5, MS: parseFloat(get('ac-ls5-MS')) || 0, SW: parseFloat(get('ac-ls5-SW')) || 0, NM: parseFloat(get('ac-ls5-NM')) || 0.50, BW: parseFloat(get('ac-ls5-BW')) || 0.35, JP: parseFloat(get('ac-ls5-JP')) || 0.15 }
+        },
+        areas: {}
+    };
+    ['tianlu','zhenyue','longyin','fuyao','nanming','dibao'].forEach(id => {
+        cfg.areas[id] = {
+            threshold: parseInt(get(`ac-area-${id}-threshold`)) || 0,
+            JP: parseFloat(get(`ac-area-${id}-JP`)) || 0,
+            BW: parseFloat(get(`ac-area-${id}-BW`)) || 0,
+            NM: parseFloat(get(`ac-area-${id}-NM`)) || 0,
+            SW: parseFloat(get(`ac-area-${id}-SW`)) || 0,
+            MS: parseFloat(get(`ac-area-${id}-MS`)) || 0
+        };
+    });
+    cfg.areas.ganze = { threshold: parseInt(get('ac-area-ganze-threshold')) || 77777 };
+    cfg.areas.liquan = { threshold: parseInt(get('ac-area-liquan-threshold')) || 99999 };
+    const res = await apiFetch('/api/admin/alms-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cfg)
+    });
+    const msg = document.getElementById('ac-msg');
+    if (res && res.code === 200) {
+        msg.textContent = '✅ 保存成功！';
+        msg.style.color = '#27ae60';
+    } else {
+        msg.textContent = '❌ 保存失败: ' + (res?.message || '未知错误');
+        msg.style.color = '#e74c3c';
+    }
+    setTimeout(() => { if(msg) msg.textContent = ''; }, 3000);
+}
+
 async function loadDecoration() {
     const data = await apiFetch('/api/decoration/');
     const tbody = document.querySelector('#decoration table tbody');
@@ -3230,6 +3479,110 @@ async function loadAnalytics() {
     } else {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u57cb\u70b9\u6570\u636e</td></tr>';
     }
+}
+
+// --- 角色管理 ---
+async function loadAdminRoles() {
+    const data = await apiFetch('/api/admin/roles/');
+    if (!data || data.code !== 200) return;
+    const tbody = document.getElementById('roles-tbody');
+    if (data.data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#888;padding:20px">暂无角色</td></tr>';
+        return;
+    }
+    tbody.innerHTML = data.data.map(r => 
+        '<tr><td>' + r.id + '</td><td>' + r.name + '</td><td>' + (r.permissions || '-') + '</td><td>' +
+        (r.id === 1 ? '<span style="color:#888">不可操作</span>' : 
+            '<button class="btn btn-sm" onclick="deleteRole(' + r.id + ')">删除</button>') + '</td></tr>'
+    ).join('');
+}
+
+async function deleteRole(id) {
+    if (!confirm('确定删除该角色？')) return;
+    const data = await apiFetch('/api/admin/roles/' + id, { method: 'DELETE' });
+    if (data && data.code === 200) {
+        showToast('删除成功', 'success');
+        loadAdminRoles();
+    } else {
+        showToast(data.message || '删除失败', 'error');
+    }
+}
+
+function showAddRoleModal() {
+    var body = '<div style="padding:10px 0">' +
+        '<p style="margin-bottom:15px">请输入角色名并选择权限</p>' +
+        '<input type="text" id="arName" placeholder="角色名" style="width:100%;padding:10px;margin-bottom:10px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:8px;box-sizing:border-box">' +
+        '<div style="margin-bottom:10px">权限：</div>' +
+        '<div style="background:#1a1a2e;border:1px solid #444;border-radius:8px;padding:10px">' +
+        '<label style="display:block;margin-bottom:8px;cursor:pointer"><input type="checkbox" value="users" class="perm-check"> 用户管理</label>' +
+        '<label style="display:block;margin-bottom:8px;cursor:pointer"><input type="checkbox" value="announcements" class="perm-check"> 公告管理</label>' +
+        '<label style="display:block;margin-bottom:8px;cursor:pointer"><input type="checkbox" value="analytics" class="perm-check"> 数据分析</label>' +
+        '<label style="display:block;margin-bottom:8px;cursor:pointer"><input type="checkbox" value="settings" class="perm-check"> 系统设置</label>' +
+        '<label style="display:block;margin-bottom:8px;cursor:pointer"><input type="checkbox" value="roles" class="perm-check"> 角色管理</label>' +
+        '<label style="display:block;cursor:pointer"><input type="checkbox" value="all" class="perm-check" id="permAll"> 所有权限</label>' +
+        '</div></div>';
+    var footer = '<button class="btn" onclick="closeGlobalModal()" style="background:#34495e;margin-right:10px">取消</button>' +
+        '<button class="btn btn-primary" onclick="doAddRole()">创建</button>';
+    showGlobalModal('➕ 新增角色', body, footer);
+    document.getElementById('permAll').addEventListener('change', function() {
+        document.querySelectorAll('.perm-check').forEach(cb => cb.checked = this.checked);
+    });
+}
+
+function doAddRole() {
+    var name = document.getElementById('arName').value.trim();
+    if (!name) { showToast('请输入角色名', 'warn'); return; }
+    var perms = [];
+    document.querySelectorAll('.perm-check:checked').forEach(cb => perms.push(cb.value));
+    var permissions = perms.join(',');
+    apiFetch('/api/admin/roles/', {
+        method: 'POST',
+        body: JSON.stringify({ name, permissions })
+    }).then(d => {
+        if (d && d.code === 200) { showToast('创建成功', 'success'); closeGlobalModal(); loadAdminRoles(); }
+        else showToast(d.message || '创建失败', 'error');
+    });
+}
+
+// --- 管理员管理 ---
+async function loadAdminUsers() {
+    const data = await apiFetch('/api/admin/roles/users');
+    if (!data || data.code !== 200) return;
+    const tbody = document.getElementById('adminusers-tbody');
+    if (data.data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#888;padding:20px">暂无管理员</td></tr>';
+        return;
+    }
+    tbody.innerHTML = data.data.map(u => 
+        '<tr><td>' + u.id + '</td><td>' + u.username + '</td><td>' + (u.roles || '-') + '</td><td>' + new Date(u.created_at).toLocaleString() + '</td><td>' +
+        (u.id === 1 ? '<span style="color:#888">不可操作</span>' : 
+            '<button class="btn btn-sm" onclick="deleteAdminUser(' + u.id + ')">删除</button>') + '</td></tr>'
+    ).join('');
+}
+
+async function deleteAdminUser(id) {
+    if (!confirm('确定删除该管理员？')) return;
+    const data = await apiFetch('/api/admin/roles/users/' + id, { method: 'DELETE' });
+    if (data && data.code === 200) {
+        showToast('删除成功', 'success');
+        loadAdminUsers();
+    } else {
+        showToast(data.message || '删除失败', 'error');
+    }
+}
+
+function showAddAdminUserModal() {
+    const username = prompt('用户名：');
+    if (!username) return;
+    const password = prompt('密码：');
+    if (!password) return;
+    apiFetch('/api/admin/roles/users', {
+        method: 'POST',
+        body: JSON.stringify({ username, password })
+    }).then(d => {
+        if (d && d.code === 200) { showToast('创建成功', 'success'); loadAdminUsers(); }
+        else showToast(d.message || '创建失败', 'error');
+    });
 }
 
 // --- 系统设置 ---

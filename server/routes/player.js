@@ -8,13 +8,26 @@ const { success, fail, getRealm, expForLevel } = require('../utils/helpers');
 router.get('/info', authMiddleware, async (req, res, next) => {
   try {
     const [rows] = await pool.query(
-      `SELECT p.*, v.vip_level, v.monthly_card, v.total_recharge 
+      `SELECT p.*, v.vip_level, v.monthly_card, v.total_recharge,
+              p.invitation_code as invitationCode, p.invited_by as invitedBy
        FROM player_data p 
        LEFT JOIN player_vip v ON p.user_id = v.user_id 
        WHERE p.user_id = ?`, [req.user.userId]
     );
     if (rows.length === 0) return fail(res, '玩家数据不存在');
-    return success(res, rows[0]);
+
+    const player = rows[0];
+
+    // 计算离线法力恢复（10点/小时，上限100）
+    if (player.last_update_time) {
+      const elapsed = Date.now() - new Date(player.last_update_time).getTime();
+      const manaRecovered = Math.floor(elapsed * 10 / 3600000);
+      player.mana = Math.min(100, Math.max(0, (player.mana || 0)) + manaRecovered);
+      // 同时更新数据库
+      await pool.query('UPDATE player_data SET mana=? WHERE user_id=?', [player.mana, req.user.userId]);
+    }
+
+    return success(res, player);
   } catch(err) { next(err); }
 });
 
@@ -23,7 +36,7 @@ router.post('/daily-reset', authMiddleware, async (req, res, next) => {
   try {
     const today = new Date().toISOString().split('T')[0];
     await pool.query(
-      `UPDATE player_data SET daily_alms=20, daily_sign=0, last_daily_reset=? WHERE user_id=? AND (last_daily_reset IS NULL OR last_daily_reset<?)`,
+      `UPDATE player_data SET daily_alms=20, daily_sign=0, visit_count=0, last_daily_reset=? WHERE user_id=? AND (last_daily_reset IS NULL OR last_daily_reset<?)`,
       [today, req.user.userId, today]
     );
     return success(res, null, '每日重置完成');
@@ -47,14 +60,11 @@ router.post('/sync-data', authMiddleware, async (req, res, next) => {
     } = req.body;
     const realm = getRealm(level || 1);
 
-    // 计算离线法力恢复（10点/小时）
-    const [oldRows] = await pool.query('SELECT last_update_time, mana FROM player_data WHERE user_id=?', [req.user.userId]);
-    let manaToSave = mana || 0;
-    if (oldRows.length > 0 && oldRows[0].last_update_time) {
-      const elapsed = Date.now() - oldRows[0].last_update_time;
-      const manaRecovered = Math.floor(elapsed * 10 / 3600000);
-      manaToSave = Math.min(100, (manaToSave || 0) + manaRecovered);
-    }
+    // 转换 last_login_date 为 MySQL DATE 格式（只取日期部分）
+    const lastLoginDate = last_login_date ? new Date(last_login_date).toISOString().split('T')[0] : null;
+
+    // 直接使用客户端上报的法力值（客户端已自行计算恢复）
+    const manaToSave = Math.min(100, Math.max(0, mana || 0));
 
     await pool.query(
       `UPDATE player_data SET
@@ -74,7 +84,7 @@ router.post('/sync-data', authMiddleware, async (req, res, next) => {
         gold_paper||0, fruits||0, incense_sticks||0, candles||0,
         alms_count||0, great_count||0, worship_count||0, bushushort_small||0, bushushort_medium||0, bushushort_large||0,
         daily_alms||20, daily_sign||0, sign_streak||0, total_sign||0, alms_miss_streak||0, alms_today||0,
-        tutorial_completed||0, today_login||0, announcement_shown||0, last_login_date||null, shengxiao||null,
+        tutorial_completed||0, today_login||0, announcement_shown||0, lastLoginDate||null, (shengxiao !== null && shengxiao !== undefined ? shengxiao : null),
         inv||null, sr||null, task_claimed||null, area_first_visit||null, area_visited||null, player_name||null,
         incense_type||null, incense_end_at||null, shield_end_at||null, be_alms_count||0,
         read_announcements||null, mails||null,
@@ -156,6 +166,38 @@ router.post('/sign-in', authMiddleware, async (req, res, next) => {
       [streak, reward, req.user.userId]
     );
     return success(res, { streak, reward, total: rows[0].total_sign + 1 }, `签到成功！连续${streak}天，奖励${reward}香火钱`);
+  } catch(err) { next(err); }
+});
+
+// POST /api/player/collect-temple - 收取庙宇存储
+router.post('/collect-temple', authMiddleware, async (req, res, next) => {
+  try {
+    const [rows] = await pool.query('SELECT temple_storage, gold FROM player_data WHERE user_id=?', [req.user.userId]);
+    if (rows.length === 0) return fail(res, '玩家数据不存在');
+    
+    const templeStorage = rows[0].temple_storage || 0;
+    if (templeStorage <= 0) {
+      return success(res, { collected: 0, money: rows[0].gold }, '庙宇存储为0');
+    }
+    
+    // 把庙宇存储加到玩家金钱
+    await pool.query(
+      'UPDATE player_data SET temple_storage=0, gold=gold+? WHERE user_id=?',
+      [templeStorage, req.user.userId]
+    );
+    
+    return success(res, { collected: templeStorage, money: rows[0].gold + templeStorage }, '收取成功');
+  } catch(err) { next(err); }
+});
+
+// GET /api/player/rank-list - 获取排行榜
+router.get('/rank-list', authMiddleware, async (req, res, next) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT user_id, nickname, level, gold, merit, worship_count, sign_streak, total_sign 
+       FROM player_data ORDER BY gold DESC LIMIT 50`
+    );
+    return success(res, rows, '获取成功');
   } catch(err) { next(err); }
 });
 
