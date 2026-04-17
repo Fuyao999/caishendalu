@@ -60,6 +60,7 @@ router.get('/list', authMiddleware, async (req, res) => {
 router.post('/add', authMiddleware, async (req, res) => {
     try {
         const userId = req.user.userId;
+        const { targetPlayerId } = req.body;  // 可选：指定要添加的玩家ID
         
         // 获取 player_id
         const [playerRows] = await db.pool.query(
@@ -79,28 +80,76 @@ router.post('/add', authMiddleware, async (req, res) => {
             [playerId]
         );
         
-        if (countResult[0].count >= 20) {
-            return res.status(400).json({ code: 400, message: '好友已满（最多20人）' });
+        if (countResult[0].count >= 100) {
+            return res.status(400).json({ code: 400, message: '好友已满（最多100人）' });
         }
         
-        // 生成随机好友
-        const randomName = NAMES[Math.floor(Math.random() * NAMES.length)];
-        const randomLevel = LEVELS[Math.floor(Math.random() * LEVELS.length)];
-        const friendId = Math.floor(Math.random() * 10000) + 1000; // 模拟好友ID
+        let friendId, friendName, friendLevel;
+        
+        if (targetPlayerId) {
+            // 指定了要添加的玩家ID，先查玩家表，再查机器人表
+            const [targetRows] = await db.pool.query(
+                'SELECT player_id, nickname, level FROM player_data WHERE player_id = ?',
+                [targetPlayerId]
+            );
+            if (targetRows.length > 0) {
+                friendId = targetRows[0].player_id;
+                friendName = targetRows[0].nickname;
+                friendLevel = targetRows[0].level;
+            } else {
+                // 查机器人表
+                const [robotRows] = await db.pool.query(
+                    'SELECT player_id, nickname, level FROM robots WHERE player_id = ?',
+                    [targetPlayerId]
+                );
+                if (robotRows.length === 0) {
+                    return res.status(404).json({ code: 404, message: '要添加的玩家不存在' });
+                }
+                friendId = robotRows[0].player_id;
+                friendName = robotRows[0].nickname;
+                friendLevel = robotRows[0].level;
+            }
+        } else {
+            // 从真实玩家或机器人里随机选一个
+            const [allPlayers] = await db.pool.query(
+                `SELECT player_id, nickname, level FROM player_data WHERE player_id != ? LIMIT 50`,
+                [playerId]
+            );
+            const [allRobots] = await db.pool.query(
+                `SELECT player_id, nickname, level FROM robots LIMIT 50`
+            );
+            const combined = [...allPlayers, ...allRobots];
+            if (combined.length === 0) {
+                return res.status(404).json({ code: 404, message: '暂无可添加的好友' });
+            }
+            const randomFriend = combined[Math.floor(Math.random() * combined.length)];
+            friendId = randomFriend.player_id;
+            friendName = randomFriend.nickname;
+            friendLevel = randomFriend.level;
+        }
+        
+        // 检查是否已经是好友
+        const [existRows] = await db.pool.query(
+            'SELECT id FROM friends WHERE player_id = ? AND friend_id = ?',
+            [playerId, friendId]
+        );
+        if (existRows.length > 0) {
+            return res.status(400).json({ code: 400, message: '该玩家已在好友列表中' });
+        }
         
         // 插入好友
         await db.pool.query(
             'INSERT INTO friends (player_id, friend_id, friend_name, friend_level, visit_count) VALUES (?, ?, ?, ?, 0)',
-            [playerId, friendId, randomName, randomLevel]
+            [playerId, friendId, friendName, friendLevel]
         );
         
         res.json({
             code: 200,
-            message: `添加好友 ${randomName} 成功！`,
+            message: `添加好友 ${friendName} 成功！`,
             data: {
                 friendId,
-                name: randomName,
-                level: randomLevel
+                name: friendName,
+                level: friendLevel
             }
         });
         

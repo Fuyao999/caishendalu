@@ -781,9 +781,8 @@
                 <div class="header">
                     <h2>🤖 机器人管理</h2>
                     <div>
-                        <button class="btn btn-primary" onclick="batchCreateRobots()">批量创建</button>
-                        <button class="btn btn-success" onclick="alert('AI调度')">运行AI调度</button>
-                        <button class="btn btn-warning" onclick="alert('批量停用：机器人将变为离线状态，不会从玩家好友列表中消失')">批量停用</button>
+                        <button class="btn btn-primary" onclick="showCreateRobotModal()">+ 单个创建</button>
+                        <button class="btn btn-success" onclick="showBatchCreateRobotModal()">📋 批量创建</button>
                     </div>
                 </div>
                 
@@ -1655,6 +1654,7 @@
             document.getElementById(pageName).style.display = 'block';
             document.querySelectorAll('.nav-menu li').forEach(function(li){ li.classList.remove('active'); });
             if(event && event.target) event.target.closest('li').classList.add('active');
+            if (pageName === 'robots') loadRobots();
         }
 
         // ===== Toast提示 =====
@@ -2066,7 +2066,18 @@
             if (page === 'robots') {
                 if (text === '搜索') {
                     var input = btn.closest('.search-box').querySelector('input');
-                    showToast('🔍 搜索: ' + (input.value || '全部机器人'), 'success');
+                    var keyword = (input.value || '').toLowerCase().trim();
+                    if (keyword) {
+                        var filtered = gRobots.filter(r => 
+                            String(r.player_id).includes(keyword) || 
+                            (r.nickname && r.nickname.toLowerCase().includes(keyword))
+                        );
+                        renderRobotsTable(filtered);
+                        showToast('找到 ' + filtered.length + ' 个结果', 'success');
+                    } else {
+                        renderRobotsTable(gRobots);
+                        showToast('显示全部 ' + gRobots.length + ' 个机器人', 'success');
+                    }
                     return;
                 }
                 if (text === '详情' && row.length >= 7) {
@@ -2512,6 +2523,302 @@
             // 更新管理员名称
             const adminInfo = document.querySelector('#dashboard .admin-info span');
             if (adminInfo) adminInfo.textContent = '管理员：' + (localStorage.getItem('admin_username') || 'admin');
+        }
+
+        // ===== 机器人管理数据加载 =====
+        let gRobots = [];
+        async function loadRobots() {
+            const data = await apiFetch('/api/robots');
+            if (!data || data.code !== 200) {
+                showToast('加载机器人数据失败', 'error');
+                return;
+            }
+            gRobots = data.data || [];
+            renderRobotsTable(gRobots);
+            updateRobotStats(gRobots);
+        }
+
+        function renderRobotsTable(robots) {
+            const tbody = document.getElementById('robots-tbody');
+            if (!tbody) return;
+            const now = Date.now();
+            tbody.innerHTML = robots.map(r => {
+                const hasShield = r.has_shield || (r.shield_end_at > now);
+                return `<tr>
+                    <td>${r.player_id}</td>
+                    <td>${r.nickname}</td>
+                    <td>Lv${r.level}</td>
+                    <td><span class="badge badge-info">正常</span></td>
+                    <td><span class="badge ${hasShield ? 'badge-warning' : 'badge-success'}">${hasShield ? '护盾中' : '正常'}</span></td>
+                    <td><span class="badge badge-success">在线</span></td>
+                    <td>0</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="viewRobot(${r.player_id})">详情</button>
+                        <button class="btn btn-sm" onclick="editRobot(${r.player_id})" style="background:#2a3a4a;color:#f5a623">编辑</button>
+                        <button class="btn btn-sm ${r.disabled ? 'btn-success' : 'btn-warning'}" onclick="toggleRobotStatus(${r.player_id}, ${r.disabled})">${r.disabled ? '启用' : '停用'}</button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function updateRobotStats(robots) {
+            const stats = document.querySelectorAll('#robots .stat-card .value');
+            const now = Date.now();
+            const total = robots.length;
+            const shielded = robots.filter(r => r.has_shield || r.shield_end_at > now).length;
+            if (stats.length >= 4) {
+                stats[0].textContent = total;
+                stats[1].textContent = total - shielded;
+                stats[2].textContent = Math.floor(total * 0.8);
+                stats[3].textContent = '0';
+            }
+        }
+
+        function viewRobot(playerId) {
+            const r = gRobots.find(r => r.player_id === playerId);
+            if (!r) return;
+            const now = Date.now();
+            const hasShield = r.has_shield || (r.shield_end_at > now);
+            showDetailModal('🤖 ' + r.nickname, [
+                ['ID', r.player_id], ['名称', r.nickname], ['等级', r.level],
+                ['庙宇等级', r.temple_level], ['香火钱', r.gold || 0],
+                ['声望', r.reputation], ['庙宇存储', r.temple_storage || 0],
+                ['善缘', r.faith || 0], ['碎片', r.fragments || 0],
+                ['法力', r.mana || 100], ['被化缘次数', r.be_alms_count || 0],
+                ['护盾状态', hasShield ? '有' : '无']
+            ]);
+        }
+
+        function editRobot(playerId) {
+            const r = gRobots.find(r => r.player_id === playerId);
+            if (!r) return;
+            const body = `
+                <div style="display:grid;gap:10px;padding:10px 0">
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <label style="width:80px;color:#888">ID</label>
+                        <input type="number" id="editRobotId" value="${r.player_id}" readonly style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#888;border-radius:4px">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <label style="width:80px;color:#888">名称</label>
+                        <input type="text" id="editRobotName" value="${r.nickname}" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <label style="width:80px;color:#888">等级</label>
+                        <input type="number" id="editRobotLevel" value="${r.level}" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <label style="width:80px;color:#888">香火钱</label>
+                        <input type="number" id="editRobotGold" value="${r.gold || 0}" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <label style="width:80px;color:#888">声望</label>
+                        <input type="number" id="editRobotRep" value="${r.reputation || 0}" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <label style="width:80px;color:#888">庙宇存储</label>
+                        <input type="number" id="editRobotStorage" value="${r.temple_storage || 0}" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <label style="width:80px;color:#888">庙宇等级</label>
+                        <input type="number" id="editRobotTempleLv" value="${r.temple_level || 1}" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <label style="width:80px;color:#888">法力</label>
+                        <input type="number" id="editRobotMana" value="${r.mana || 100}" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <label style="width:80px;color:#888">护盾</label>
+                        <select id="editRobotShield" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
+                            <option value="0" ${!r.has_shield ? 'selected' : ''}>无</option>
+                            <option value="1" ${r.has_shield ? 'selected' : ''}>有</option>
+                        </select>
+                    </div>
+                </div>`;
+            const footer = `<button class="btn" onclick="closeGlobalModal()" style="background:#34495e;margin-right:10px">取消</button>
+                <button class="btn btn-primary" onclick="doEditRobot()">保存</button>`;
+            showGlobalModal('✏️ 编辑机器人', body, footer);
+        }
+
+        async function doEditRobot() {
+            const playerId = document.getElementById('editRobotId').value;
+            const res = await apiFetch('/api/robots/' + playerId, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    nickname: document.getElementById('editRobotName').value,
+                    level: parseInt(document.getElementById('editRobotLevel').value) || 1,
+                    gold: parseInt(document.getElementById('editRobotGold').value) || 0,
+                    reputation: parseInt(document.getElementById('editRobotRep').value) || 0,
+                    temple_storage: parseInt(document.getElementById('editRobotStorage').value) || 0,
+                    temple_level: parseInt(document.getElementById('editRobotTempleLv').value) || 1,
+                    mana: parseInt(document.getElementById('editRobotMana').value) || 100,
+                    has_shield: parseInt(document.getElementById('editRobotShield').value) || 0
+                })
+            });
+            if (res && res.code === 200) {
+                showToast('更新成功', 'success');
+                closeGlobalModal();
+                loadRobots();
+            } else {
+                showToast(res?.message || '更新失败', 'error');
+            }
+        }
+
+        function deleteRobot(playerId, nickname) {
+            showConfirm('⚠️ 删除机器人', '确定删除 <strong>' + nickname + '</strong> 吗？', async function() {
+                const res = await apiFetch('/api/robots/' + playerId, { method: 'DELETE' });
+                if (res && res.code === 200) {
+                    showToast('已删除', 'success');
+                    loadRobots();
+                } else {
+                    showToast(res?.message || '删除失败', 'error');
+                }
+            });
+        }
+
+        async function toggleRobotStatus(playerId, currentlyDisabled) {
+            const newDisabled = currentlyDisabled ? 0 : 1;
+            const action = newDisabled ? '停用' : '启用';
+            const res = await apiFetch('/api/robots/' + playerId, {
+                method: 'PUT',
+                body: JSON.stringify({ disabled: newDisabled })
+            });
+            if (res && res.code === 200) {
+                showToast('已' + action, 'success');
+                loadRobots();
+            } else {
+                showToast(res?.message || action + '失败', 'error');
+            }
+        }
+
+        function showCreateRobotModal() {
+            const maxId = gRobots.length > 0 ? Math.max(...gRobots.map(r => r.player_id)) : 900000;
+            const body = `
+                <div style="display:grid;gap:10px;padding:10px 0">
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <label style="width:80px;color:#888">ID</label>
+                        <input type="number" id="newRobotId" value="${maxId + 1}" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <label style="width:80px;color:#888">名称</label>
+                        <input type="text" id="newRobotName" placeholder="机器人名称" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <label style="width:80px;color:#888">等级</label>
+                        <input type="number" id="newRobotLevel" value="1" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <label style="width:80px;color:#888">庙宇存储</label>
+                        <input type="number" id="newRobotStorage" value="0" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
+                    </div>
+                </div>`;
+            const footer = `<button class="btn" onclick="closeGlobalModal()" style="background:#34495e;margin-right:10px">取消</button>
+                <button class="btn btn-primary" onclick="doCreateRobot()">创建</button>`;
+            showGlobalModal('🤖 创建机器人', body, footer);
+        }
+
+        async function doCreateRobot() {
+            const playerId = parseInt(document.getElementById('newRobotId').value);
+            if (!playerId || playerId < 900001 || playerId > 999999) {
+                showToast('ID需在900001-999999之间', 'warn');
+                return;
+            }
+            const nickname = document.getElementById('newRobotName').value.trim();
+            if (!nickname) {
+                showToast('请输入名称', 'warn');
+                return;
+            }
+            const res = await apiFetch('/api/robots', {
+                method: 'POST',
+                body: JSON.stringify({
+                    player_id: playerId,
+                    nickname: nickname,
+                    level: parseInt(document.getElementById('newRobotLevel').value) || 1,
+                    temple_storage: parseInt(document.getElementById('newRobotStorage').value) || 0,
+                    temple_level: 1
+                })
+            });
+            if (res && res.code === 200) {
+                showToast('创建成功', 'success');
+                closeGlobalModal();
+                loadRobots();
+            } else {
+                showToast(res?.message || '创建失败', 'error');
+            }
+        }
+
+        function showBatchCreateRobotModal() {
+            const maxId = gRobots.length > 0 ? Math.max(...gRobots.map(r => r.player_id)) : 900000;
+            const body = `
+                <div style="display:grid;gap:12px;padding:10px 0">
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <label style="width:90px;color:#888">起始ID</label>
+                        <input type="number" id="batchStartId" value="${maxId + 1}" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <label style="width:90px;color:#888">创建数量</label>
+                        <input type="number" id="batchCount" value="10" min="1" max="100" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <label style="width:90px;color:#888">等级范围</label>
+                        <input type="number" id="batchMinLv" value="1" min="1" max="99" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
+                        <span style="color:#888">~</span>
+                        <input type="number" id="batchMaxLv" value="80" min="1" max="99" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <label style="width:90px;color:#888">香火钱区间</label>
+                        <input type="number" id="batchMinGold" value="1000" min="0" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
+                        <span style="color:#888">~</span>
+                        <input type="number" id="batchMaxGold" value="5000" min="0" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
+                    </div>
+                    <div style="color:#888;font-size:12px">💡 批量创建将自动分配ID，名称随机生成</div>
+                </div>`;
+            const footer = `<button class="btn" onclick="closeGlobalModal()" style="background:#34495e;margin-right:10px">取消</button>
+                <button class="btn btn-primary" onclick="doBatchCreateRobot()">确认创建</button>`;
+            showGlobalModal('🤖 批量创建机器人', body, footer);
+        }
+
+        async function doBatchCreateRobot() {
+            const startId = parseInt(document.getElementById('batchStartId').value) || 900001;
+            const count = parseInt(document.getElementById('batchCount').value) || 10;
+            const minLv = parseInt(document.getElementById('batchMinLv').value) || 1;
+            const maxLv = parseInt(document.getElementById('batchMaxLv').value) || 80;
+            const minGold = parseInt(document.getElementById('batchMinGold').value) || 1000;
+            const maxGold = parseInt(document.getElementById('batchMaxGold').value) || 5000;
+
+            if (startId < 900001 || startId > 999999) {
+                showToast('起始ID需在900001-999999之间', 'warn');
+                return;
+            }
+            if (startId + count - 1 > 999999) {
+                showToast('ID范围超出上限', 'warn');
+                return;
+            }
+
+            closeGlobalModal();
+            showToast('正在创建 ' + count + ' 个机器人...', 'success');
+
+            let ok = 0, fail = 0;
+            for (let i = 0; i < count; i++) {
+                const level = Math.floor(Math.random() * (maxLv - minLv + 1)) + minLv;
+                const gold = Math.floor(Math.random() * (maxGold - minGold + 1)) + minGold;
+                const res = await apiFetch('/api/robots', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        player_id: startId + i,
+                        nickname: randomRobotName(),
+                        level: level,
+                        gold: gold,
+                        temple_storage: Math.floor(gold * 0.5),
+                        temple_level: Math.ceil(level / 20)
+                    })
+                });
+                if (res && res.code === 200) ok++;
+                else fail++;
+                if (i % 10 === 9) await new Promise(r => setTimeout(r, 100));
+            }
+
+            showToast('完成：成功' + ok + '个，失败' + fail + '个', fail > 0 ? 'warn' : 'success');
+            loadRobots();
         }
 
         // ===== Users数据加载 =====
@@ -3279,6 +3586,8 @@ async function loadAlmsConfig() {
                     <input type="number" id="ac-activeAlmsMerit" value="${cfg.activeAlmsMerit || 5}" style="width:100%;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
                 <div><label style="color:#aaa;font-size:13px">被动化缘功德</label><br>
                     <input type="number" id="ac-passiveAlmsMerit" value="${cfg.passiveAlmsMerit || 3}" style="width:100%;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
+                <div><label style="color:#aaa;font-size:13px">机器人无产出比例（0.05=5%）</label><br>
+                    <input type="number" step="0.01" id="ac-robotNoProductionRate" value="${cfg.robotNoProductionRate || 0.05}" style="width:100%;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;box-sizing:border-box"></div>
             </div>
         </div>
         <div style="margin-bottom:20px">
@@ -3391,6 +3700,7 @@ async function saveAlmsConfig() {
         manaRegenPerHour: parseInt(get('ac-manaRegenPerHour')) || 10,
         activeAlmsMerit: parseInt(get('ac-activeAlmsMerit')) || 5,
         passiveAlmsMerit: parseInt(get('ac-passiveAlmsMerit')) || 3,
+        robotNoProductionRate: parseFloat(get('ac-robotNoProductionRate')) || 0.05,
         safe: { lm: parseFloat(get('ac-safe-lm')) || 0.10, mm: parseFloat(get('ac-safe-mm')) || -0.30 },
         risk: { lm: parseFloat(get('ac-risk-lm')) || -0.10, mm: parseFloat(get('ac-risk-mm')) || 0.50 },
         mult: {

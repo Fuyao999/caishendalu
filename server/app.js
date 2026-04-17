@@ -42,11 +42,13 @@ const questRoutes     = require('./routes/quests');
 const decorationRoutes = require('./routes/decoration');
 const analyticsRoutes = require('./routes/analytics');
 const settingsRoutes  = require('./routes/settings');
+const robotRoutes     = require('./routes/robots');
 const inviteRoutes    = require('./routes/invite');
 const friendRoutes     = require('./routes/friend');
 const mailRoutes       = require('./routes/mail');
 const titleRoutes      = require('./routes/title');
 const decorRoutes      = require('./routes/decor');
+const cloudTourRoutes   = require('./routes/cloudTour');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -116,11 +118,13 @@ app.use('/api/quests',    questRoutes);
 app.use('/api/decoration', decorationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/settings',  settingsRoutes);
+app.use('/api/robots',     robotRoutes);
 app.use('/api/invite',    inviteRoutes);
 app.use('/api/friend',     friendRoutes);
 app.use('/api/mail',       mailRoutes);
 app.use('/api/title',      titleRoutes);
 app.use('/api/decor',      decorRoutes);
+app.use('/api/cloud-tour', cloudTourRoutes);
 
 // ==================== 健康检查 ====================
 app.get('/api/health', (req, res) => {
