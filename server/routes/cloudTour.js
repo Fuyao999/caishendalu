@@ -164,8 +164,8 @@ router.post('/alms', authMiddleware, async (req, res, next) => {
 
     // 获取化缘者(A)数据
     const [almserRows] = await pool.query(
-      `SELECT pd.user_id, pd.player_id, pd.gold, pd.temple_level, pd.level, pd.reputation,
-              pd.temple_storage AS myStorage,
+      `SELECT pd.user_id, pd.player_id, pd.gold, pd.temple_level, pd.level, pd.reputation, pd.merit,
+              pd.temple_storage AS myStorage, pd.fragments,
               pd.be_alms_count, pd.shield_end_at, pd.mana
        FROM player_data pd WHERE pd.user_id = ?`,
       [userId]
@@ -249,26 +249,28 @@ router.post('/alms', authMiddleware, async (req, res, next) => {
       : 0;
     const almsAmount = Math.max(0, Math.floor(baseLimit * levelDiffCoeff * storageRatio + reputationBonus));
 
-    let newGold, newTempleStorage;
+    let newGold, newTempleStorage, newFragments;
 
     if (isRobotFlag) {
       // 机器人：只加钱，不真实扣对方数据
       newGold = almser.gold + almsAmount;
       newTempleStorage = Math.max(0, target.temple_storage - almsAmount);
+      newFragments = (almser.fragments || 0) + 1;
       await pool.query(
-        `UPDATE player_data SET gold = ?, mana = mana - ? WHERE user_id = ?`,
+        `UPDATE player_data SET gold = ?, mana = mana - ?, fragments = fragments + 1, reputation = reputation + 1, merit = merit + 5 WHERE user_id = ?`,
         [newGold, manaCost, userId]
-    );
+      );
     } else {
       // 真实玩家：扣对方庙宇存储
       if (target.temple_storage < almsAmount) {
         const actualAlms = target.temple_storage;
+        newFragments = (almser.fragments || 0) + 1;
         await pool.query(
           `UPDATE player_data SET temple_storage = 0 WHERE player_id = ?`,
           [targetId]
         );
         await pool.query(
-          `UPDATE player_data SET gold = gold + ?, mana = mana - ? WHERE user_id = ?`,
+          `UPDATE player_data SET gold = gold + ?, mana = mana - ?, fragments = fragments + 1, reputation = reputation + 1, merit = merit + 5 WHERE user_id = ?`,
           [actualAlms, manaCost, userId]
         );
         newGold = almser.gold + actualAlms;
@@ -278,8 +280,9 @@ router.post('/alms', authMiddleware, async (req, res, next) => {
           `UPDATE player_data SET temple_storage = temple_storage - ? WHERE player_id = ?`,
           [almsAmount, targetId]
         );
+        newFragments = (almser.fragments || 0) + 1;
         await pool.query(
-          `UPDATE player_data SET gold = gold + ?, mana = mana - ? WHERE user_id = ?`,
+          `UPDATE player_data SET gold = gold + ?, mana = mana - ?, fragments = fragments + 1, reputation = reputation + 1, merit = merit + 5 WHERE user_id = ?`,
           [almsAmount, manaCost, userId]
         );
         newGold = almser.gold + almsAmount;
@@ -324,9 +327,10 @@ router.post('/alms', authMiddleware, async (req, res, next) => {
       newGold,
       newMana: (almser.mana || 0) - manaCost,
       newTempleStorage,
+      newFragments: newFragments,
+      newMerit: (almser.merit || 0) + 5,
       newFaith: (target.faith || 0) + 1,
-      newReputation: (target.reputation || 0) + 2,
-      newFragments: (target.fragments || 0) + 1,
+      newReputation: (almser.reputation || 0) + 1,
       targetName: target.nickname,
     }, `向${target.nickname}云游化缘成功！获得${almsAmount}香火钱`);
 

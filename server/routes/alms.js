@@ -77,7 +77,7 @@ router.get('/status', authMiddleware, async (req, res, next) => {
   try {
     const cfg = await getAlmsConfig();
     const [rows] = await pool.query(
-      'SELECT gold, mana, daily_alms, alms_miss_streak FROM player_data WHERE user_id = ?',
+      'SELECT gold, mana, daily_alms, alms_miss_streak, fragments FROM player_data WHERE user_id = ?',
       [req.userId]
     );
     if (rows.length === 0) return fail(res, '玩家数据不存在');
@@ -119,7 +119,7 @@ router.post('/go', authMiddleware, async (req, res, next) => {
     const isGamble = areaMeta.order >= 7;
 
     const [rows] = await pool.query(
-      `SELECT pd.gold, pd.mana, pd.daily_alms, pd.alms_miss_streak, pd.merit,
+      `SELECT pd.gold, pd.mana, pd.daily_alms, pd.alms_miss_streak, pd.merit, pd.fragments, pd.reputation,
               (SELECT COUNT(*) FROM logs WHERE user_id = ? AND action = 'alms' AND JSON_EXTRACT(detail, '$.area') = ?) AS area_visit_count
        FROM player_data pd WHERE pd.user_id = ?`,
       [req.userId, area, req.userId]
@@ -196,8 +196,8 @@ router.post('/go', authMiddleware, async (req, res, next) => {
     const isMiss = resultKey === 'MS' || resultKey === 'L2';
     const newMissStreak = isMiss ? p.alms_miss_streak + 1 : 0;
 
-    // 主动化缘额外奖励：声望+1，JP/W2时碎片（JP+3，W2+5）
-    const repGain = 1;
+    // 8个区不加声望，只有碎片
+    const repGain = 0;
     const fragGain = resultKey === 'JP' ? 3 : resultKey === 'W2' ? 5 : 0;
 
     await pool.query(
