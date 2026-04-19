@@ -28,6 +28,24 @@ router.get('/info', authMiddleware, async (req, res, next) => {
 
     const player = rows[0];
 
+    // 解析 deity_buff JSON 字符串
+    if (player.deity_buff && typeof player.deity_buff === 'string') {
+      try {
+        player.deity_buff = JSON.parse(player.deity_buff);
+      } catch(e) {
+        player.deity_buff = null;
+      }
+    }
+
+    // 解析 deity_order JSON 字符串
+    if (player.deity_order && typeof player.deity_order === 'string') {
+      try {
+        player.deity_order = JSON.parse(player.deity_order);
+      } catch(e) {
+        player.deity_order = null;
+      }
+    }
+
     // 计算离线法力恢复（根据后台配置的恢复速度，上限100）
     if (player.last_update_time) {
       const elapsed = Date.now() - new Date(player.last_update_time).getTime();
@@ -52,6 +70,17 @@ router.post('/daily-reset', authMiddleware, async (req, res, next) => {
       `UPDATE player_data SET daily_alms=20, daily_sign=0, visit_count=0, last_daily_reset=? WHERE user_id=? AND (last_daily_reset IS NULL OR last_daily_reset<?)`,
       [today, req.user.userId, today]
     );
+    // 同时重置好友的拜访次数（需要先通过user_id查到player_id）
+    const [playerRows] = await pool.query(
+      'SELECT player_id FROM player_data WHERE user_id = ?',
+      [req.user.userId]
+    );
+    if (playerRows.length > 0) {
+      await pool.query(
+        `UPDATE friends SET visit_count = 0 WHERE player_id = ?`,
+        [playerRows[0].player_id]
+      );
+    }
     return success(res, null, '每日重置完成');
   } catch(err) { next(err); }
 });
@@ -61,16 +90,22 @@ router.post('/daily-reset', authMiddleware, async (req, res, next) => {
 router.post('/sync-data', authMiddleware, async (req, res, next) => {
   try {
     const {
-      gold, level, yuanbao, merit, mana, fragments, banners, faith, reputation,
+      gold, level, yuanbao, merit, mana, fragments, banners,
       gold_paper, fruits, incense_sticks, candles,
-      alms_count, great_count, worship_count, bushushort_small, bushushort_medium, bushushort_large,
+      // alms_count, great_count, worship_count, bushushort_small, bushushort_medium, bushushort_large,  // 这些字段只能通过服务器操作改变，不接受客户端sync
       daily_alms, daily_sign, sign_streak, total_sign, alms_miss_streak, alms_today,
       tutorial_completed, today_login, announcement_shown, last_login_date, shengxiao,
       inv, sr, task_claimed, area_first_visit, area_visited, player_name,
-      incense_type, incense_end_at, shield_end_at, be_alms_count,
+      incense_type, incense_end_at, shield_end_at, // be_alms_count,  // 这个也是只能服务器改
       read_announcements, mails,
-      temple_storage, opened_heaven, deity_buff
+      opened_heaven
     } = req.body;
+    
+    // temple_storage 只能通过服务器产出和玩家操作（收取/化缘）改变，不允许客户端sync覆盖
+    // deity_buff和deity_order单独处理，不允许客户端传入null覆盖数据库
+    const deityBuffInput = req.body.deity_buff;
+    const deityOrderInput = req.body.deity_order;
+    
     const realm = getRealm(level || 1);
 
     // 转换 last_login_date 为 MySQL DATE 格式（只取日期部分）
@@ -79,32 +114,51 @@ router.post('/sync-data', authMiddleware, async (req, res, next) => {
     // 直接使用客户端上报的法力值（客户端已自行计算恢复）
     const manaToSave = Math.min(100, Math.max(0, mana || 0));
 
+    // 只在客户端明确提供非null值时才更新deity_buff和deity_order
+    const deityBuffToSave = deityBuffInput !== undefined ? (deityBuffInput ? JSON.stringify(deityBuffInput) : null) : undefined;
+    const deityOrderToSave = deityOrderInput !== undefined ? (deityOrderInput ? JSON.stringify(deityOrderInput) : null) : undefined;
+
+    // 动态构建更新字段
+    let updateFields = [
+      'gold=?', 'level=?', 'yuanbao=?', 'merit=?', 'mana=?', 'fragments=?', 'banners=?',
+      'gold_paper=?', 'fruits=?', 'incense_sticks=?', 'candles=?',
+      // alms_count, great_count, worship_count, bushushort_*, be_alms_count 由服务器操作，不接受客户端sync
+      'daily_alms=?', 'daily_sign=?', 'sign_streak=?', 'total_sign=?', 'alms_miss_streak=?', 'alms_today=?',
+      'tutorial_completed=?', 'today_login=?', 'announcement_shown=?', 'last_login_date=?', 'shengxiao=?',
+      'inv=?', 'sr=?', 'task_claimed=?', 'area_first_visit=?', 'area_visited=?', 'player_name=?',
+      'incense_type=?', 'incense_end_at=?', 'shield_end_at=?',
+      'read_announcements=?', 'mails=?',
+      'realm=?', 'realm_name=?', 'last_update_time=?',
+      'opened_heaven=?'
+    ];
+    let updateValues = [
+      gold||0, level||1, yuanbao||0, merit||0, manaToSave, fragments||0, banners||0,
+      gold_paper||0, fruits||0, incense_sticks||0, candles||0,
+      // 不包含 alms_count, great_count, worship_count 等
+      daily_alms||20, daily_sign||0, sign_streak||0, total_sign||0, alms_miss_streak||0, alms_today||0,
+      tutorial_completed||0, today_login||0, announcement_shown||0, lastLoginDate||null, (shengxiao !== null && shengxiao !== undefined ? shengxiao : null),
+      inv||null, sr||null, task_claimed||null, area_first_visit||null, area_visited||null, player_name||null,
+      incense_type||null, incense_end_at||null, shield_end_at||null,
+      read_announcements||null, mails||null,
+      realm.level, realm.name, Date.now(),
+      opened_heaven||0
+    ];
+    
+    // 只在明确提供时才添加deity_buff和deity_order更新
+    if (deityBuffToSave !== undefined) {
+      updateFields.push('deity_buff=?');
+      updateValues.push(deityBuffToSave);
+    }
+    if (deityOrderToSave !== undefined) {
+      updateFields.push('deity_order=?');
+      updateValues.push(deityOrderToSave);
+    }
+    
+    updateValues.push(req.user.userId);
+
     await pool.query(
-      `UPDATE player_data SET
-        gold=?, level=?, yuanbao=?, merit=?, mana=?, fragments=?, banners=?, faith=?, reputation=?,
-        gold_paper=?, fruits=?, incense_sticks=?, candles=?,
-        alms_count=?, great_count=?, worship_count=?, bushushort_small=?, bushushort_medium=?, bushushort_large=?,
-        daily_alms=?, daily_sign=?, sign_streak=?, total_sign=?, alms_miss_streak=?, alms_today=?,
-        tutorial_completed=?, today_login=?, announcement_shown=?, last_login_date=?, shengxiao=?,
-        inv=?, sr=?, task_claimed=?, area_first_visit=?, area_visited=?, player_name=?,
-        incense_type=?, incense_end_at=?, shield_end_at=?, be_alms_count=?,
-        read_announcements=?, mails=?,
-        realm=?, realm_name=?, last_update_time=?,
-        temple_storage=?, opened_heaven=?, deity_buff=?
-       WHERE user_id=?`,
-      [
-        gold||0, level||1, yuanbao||0, merit||0, manaToSave, fragments||0, banners||0, faith||0, reputation||0,
-        gold_paper||0, fruits||0, incense_sticks||0, candles||0,
-        alms_count||0, great_count||0, worship_count||0, bushushort_small||0, bushushort_medium||0, bushushort_large||0,
-        daily_alms||20, daily_sign||0, sign_streak||0, total_sign||0, alms_miss_streak||0, alms_today||0,
-        tutorial_completed||0, today_login||0, announcement_shown||0, lastLoginDate||null, (shengxiao !== null && shengxiao !== undefined ? shengxiao : null),
-        inv||null, sr||null, task_claimed||null, area_first_visit||null, area_visited||null, player_name||null,
-        incense_type||null, incense_end_at||null, shield_end_at||null, be_alms_count||0,
-        read_announcements||null, mails||null,
-        realm.level, realm.name, Date.now(),
-        temple_storage||0, opened_heaven||0, deity_buff||null,
-        req.user.userId
-      ]
+      `UPDATE player_data SET ${updateFields.join(', ')} WHERE user_id=?`,
+      updateValues
     );
     return success(res, null, '数据已同步');
   } catch(err) { next(err); }
@@ -167,6 +221,17 @@ router.post('/update-player-id', authMiddleware, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// POST /api/player/clear-shield - 清除玩家护盾（仅清除自己的）
+router.post('/clear-shield', authMiddleware, async (req, res, next) => {
+  try {
+    await pool.query(
+      'UPDATE player_data SET has_shield = 0, shield_end_at = NULL, be_alms_count = 0 WHERE user_id = ?',
+      [req.user.userId]
+    );
+    return success(res, null, '护盾已清除');
+  } catch (err) { next(err); }
+});
+
 // POST /api/player/sign-in - 签到
 router.post('/sign-in', authMiddleware, async (req, res, next) => {
   try {
@@ -183,6 +248,25 @@ router.post('/sign-in', authMiddleware, async (req, res, next) => {
 });
 
 // POST /api/player/collect-temple - 收取庙宇存储
+router.get('/temple-data', authMiddleware, async (req, res, next) => {
+  try {
+    const [rows] = await pool.query(
+      'SELECT level, temple_storage, incense_type, incense_end_at FROM player_data WHERE user_id=?',
+      [req.user.userId]
+    );
+    if (rows.length === 0) return fail(res, '玩家数据不存在');
+    const p = rows[0];
+    const now = Date.now();
+    return success(res, {
+      level: p.level,
+      temple_storage: p.temple_storage,
+      incense_type: p.incense_type,
+      incense_end_at: p.incense_end_at,
+      is_burning: p.incense_type && p.incense_end_at && p.incense_end_at > now
+    });
+  } catch(err) { next(err); }
+});
+
 router.post('/collect-temple', authMiddleware, async (req, res, next) => {
   try {
     const [rows] = await pool.query('SELECT temple_storage, gold FROM player_data WHERE user_id=?', [req.user.userId]);
@@ -200,6 +284,136 @@ router.post('/collect-temple', authMiddleware, async (req, res, next) => {
     );
     
     return success(res, { collected: templeStorage, money: rows[0].gold + templeStorage }, '收取成功');
+  } catch(err) { next(err); }
+});
+
+// 升级庙宇配置
+const upgradeNeeds = {
+  1: { money: 5000, banners: 3, merit: 100 },
+  2: { money: 15000, banners: 6, merit: 500 },
+  3: { money: 50000, banners: 10, merit: 1500 },
+  4: { money: 150000, banners: 15, merit: 3300 }
+};
+
+// 检查财神是否解锁（与客户端相同逻辑）
+function checkGodUnlocked(p, godId) {
+  switch(godId) {
+    case 'tudigong': return true;
+    case 'guanyu': return (p.level || 1) >= 3;
+    case 'yaoshaosi': return (p.alms_count || 0) >= 30;
+    case 'chenjiugong': return (p.gold || 0) >= 5000;
+    case 'fanli': return (p.merit || 0) >= 100;
+    case 'caobao': return (p.great_count || 0) >= 3 && (p.worship_count || 0) >= 100;
+    case 'liuhai': return (p.great_count || 0) >= 1;
+    case 'xiaosheng': return (p.worship_count || 0) >= 50;
+    default: return false;
+  }
+}
+
+// POST /api/player/open-heaven-door - 开天门（5级升6级）
+router.post('/open-heaven-door', authMiddleware, async (req, res, next) => {
+  try {
+    const [rows] = await pool.query(
+      'SELECT level, gold, alms_count, great_count, worship_count, merit FROM player_data WHERE user_id=?',
+      [req.user.userId]
+    );
+    if (rows.length === 0) return fail(res, '玩家数据不存在');
+    const p = rows[0];
+    
+    if (p.level !== 5) return fail(res, '只有5级才能开天门');
+    
+    // 检查8位财神是否全齐（不包括赵公明）
+    const otherGods = ['tudigong', 'guanyu', 'yaoshaosi', 'chenjiugong', 'fanli', 'caobao', 'liuhai', 'xiaosheng'];
+    const allUnlocked = otherGods.every(id => checkGodUnlocked(p, id));
+    if (!allUnlocked) return fail(res, '9位财神未全部解锁');
+    
+    // 检查香火钱是否足够
+    if ((p.gold || 0) < 500000) return fail(res, '香火钱不足，需要50万');
+    
+    // 执行开天门
+    await pool.query(
+      'UPDATE player_data SET gold=gold-500000, level=6 WHERE user_id=?',
+      [req.user.userId]
+    );
+    
+    return success(res, {
+      newLevel: 6,
+      newGold: p.gold - 500000
+    }, '🎉 开天门成功！赵公明降临，恭喜进入第二阶段！');
+  } catch(err) { next(err); }
+});
+
+// POST /api/player/upgrade-temple - 升级庙宇
+router.post('/upgrade-temple', authMiddleware, async (req, res, next) => {
+  try {
+    const [rows] = await pool.query(
+      'SELECT gold, banners, merit, level FROM player_data WHERE user_id=?',
+      [req.user.userId]
+    );
+    if (rows.length === 0) return fail(res, '玩家数据不存在');
+    const p = rows[0];
+    
+    if (p.level >= 5) return fail(res, '庙宇已达最高等级');
+    
+    const need = upgradeNeeds[p.level];
+    if (!need) return fail(res, '升级配置错误');
+    
+    if (p.gold < need.money) return fail(res, `香火钱不足，需要${need.money}`);
+    if (p.banners < need.banners) return fail(res, `招财幡不足，需要${need.banners}个`);
+    if (p.merit < need.merit) return fail(res, `功德不足，需要${need.merit}`);
+    
+    await pool.query(
+      'UPDATE player_data SET gold=gold-?, banners=banners-?, level=level+1 WHERE user_id=?',
+      [need.money, need.banners, req.user.userId]
+    );
+    
+    return success(res, {
+      newLevel: p.level + 1,
+      newGold: p.gold - need.money,
+      newBanners: p.banners - need.banners,
+      newMerit: p.merit  // 功德只是门槛，不扣除
+    }, `升级成功！庙宇等级提升至${p.level + 1}`);
+  } catch(err) { next(err); }
+});
+
+// POST /api/player/compose-banner - 合成招财幡（4碎片=1招财幡）
+router.post('/compose-banner', authMiddleware, async (req, res, next) => {
+  try {
+    const [rows] = await pool.query('SELECT fragments, banners FROM player_data WHERE user_id=?', [req.user.userId]);
+    if (rows.length === 0) return fail(res, '玩家数据不存在');
+    const p = rows[0];
+    
+    if (p.fragments < 4) return fail(res, '碎片不足，需要4个碎片');
+    
+    await pool.query(
+      'UPDATE player_data SET fragments=fragments-4, banners=banners+1 WHERE user_id=?',
+      [req.user.userId]
+    );
+    
+    return success(res, {
+      newFragments: p.fragments - 4,
+      newBanners: p.banners + 1
+    }, '合成招财幡成功！');
+  } catch(err) { next(err); }
+});
+
+// POST /api/player/incense-friend - 代点香（消耗500香火钱，不增加善缘）
+router.post('/incense-friend', authMiddleware, async (req, res, next) => {
+  try {
+    const [rows] = await pool.query('SELECT gold, faith FROM player_data WHERE user_id=?', [req.user.userId]);
+    if (rows.length === 0) return fail(res, '玩家数据不存在');
+    const p = rows[0];
+    
+    if (p.gold < 500) return fail(res, '香火钱不足，需要500');
+    
+    await pool.query(
+      'UPDATE player_data SET gold=gold-500 WHERE user_id=?',
+      [req.user.userId]
+    );
+    
+    return success(res, {
+      newGold: p.gold - 500
+    }, '代点香成功！');
   } catch(err) { next(err); }
 });
 

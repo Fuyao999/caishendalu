@@ -21,6 +21,13 @@ const pool = mysql.createPool({
   idleTimeout: 60000,
 });
 
+// 确保连接使用正确的字符集
+pool.on('connection', (connection) => {
+  connection.query('SET NAMES utf8mb4', (err) => {
+    if (err) console.error('Set names error:', err);
+  });
+});
+
 // 测试连接
 async function testConnection() {
   try {

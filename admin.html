@@ -783,6 +783,7 @@
                     <div>
                         <button class="btn btn-primary" onclick="showCreateRobotModal()">+ 单个创建</button>
                         <button class="btn btn-success" onclick="showBatchCreateRobotModal()">📋 批量创建</button>
+                        <button class="btn btn-warning" onclick="showBatchRobotOps()">🔧 批量操作</button>
                     </div>
                 </div>
                 
@@ -1227,7 +1228,7 @@
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
                     <h2 style="margin:0">🏪 商品管理</h2>
                     <div>
-                        <input type="text" id="products-search" placeholder="搜索..." 
+                        <input type="text" id="products-search" placeholder="搜索商品..." 
                                style="padding:8px 12px;border:1px solid #555;background:#2a2a2a;color:#fff;border-radius:4px;margin-right:8px"
                                onkeyup="searchProducts()">
                         <button onclick="addProducts()" 
@@ -1241,13 +1242,13 @@
                         <thead>
                             <tr style="background:#333">
                                 <th style="padding:12px;text-align:left;color:#f5a623">ID</th>
-                                <th>商品名</th><th>类型</th><th>价格(金币)</th><th>出售价</th><th>等级要求</th><th>状态</th>
+                                <th>商品名</th><th>图标</th><th>类型</th><th>价格</th><th>数量</th><th>等级</th><th>状态</th>
                                 <th style="padding:12px;text-align:left;color:#f5a623">操作</th>
                             </tr>
                         </thead>
                         <tbody id="products-table-body">
-                            <tr><td colspan="8" style="padding:20px;text-align:center;color:#888">
-                                加载中... (连接API: /api/admin/products)
+                            <tr><td colspan="9" style="padding:20px;text-align:center;color:#888">
+                                加载中...
                             </td></tr>
                         </tbody>
                     </table>
@@ -2254,13 +2255,120 @@
         function addProducts() {
             showModal("🏪 商品管理 - 新增", `
                 <div style="display:grid;gap:12px">
-                    <div><label style="display:block;margin-bottom:4px;color:#ccc">商品名</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="商品名"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">类型</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" name="type" name="category" placeholder="类型"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">价格(金币)</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="价格(金币)"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">出售价</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="出售价"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">等级要求</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="等级要求"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">状态</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="状态"></div>
-                    <button onclick="alert('该功能开发中，敬请期待');closeModal()" style="padding:10px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold;margin-top:8px">保存</button>
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">商品名</label><input type="text" id="p-name" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="如: 线香 x10"></div>
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">图标</label><input type="text" id="p-icon" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="如: 📿" value="📿"></div>
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">描述</label><input type="text" id="p-desc" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="商品描述"></div>
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">类型</label><select id="p-type" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"><option value="incense_sticks">线香</option><option value="candles">红烛</option><option value="gold_paper">金纸</option><option value="fruits">供果</option><option value="gold">香火钱</option></select></div>
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">价格(香火钱)</label><input type="number" id="p-price" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="价格"></div>
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">获得数量</label><input type="number" id="p-count" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="购买获得数量" value="1"></div>
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">等级要求</label><input type="number" id="p-level" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="等级要求" value="1"></div>
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">状态</label><select id="p-status" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"><option value="1">上架</option><option value="0">下架</option></select></div>
+                    <button onclick="saveNewProduct()" style="padding:10px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold;margin-top:8px">保存</button>
                 </div>
             `);
         }
-        function prevProductsPage() { console.log("products prev page"); }
-        function nextProductsPage() { console.log("products next page"); }
+        
+        async function saveNewProduct() {
+            const data = {
+                name: document.getElementById('p-name').value,
+                icon: document.getElementById('p-icon').value,
+                description: document.getElementById('p-desc').value,
+                price: parseInt(document.getElementById('p-price').value) || 0,
+                item_type: document.getElementById('p-type').value,
+                item_count: parseInt(document.getElementById('p-count').value) || 1,
+                level_req: parseInt(document.getElementById('p-level').value) || 1,
+                status: parseInt(document.getElementById('p-status').value) || 1
+            };
+            
+            if (!data.name || !data.price) {
+                alert('商品名和价格不能为空');
+                return;
+            }
+            
+            const result = await apiFetch('/api/admin/shop-products', {
+                method: 'POST',
+                body: JSON.stringify(data)
+            });
+            
+            if (result.code === 200) {
+                alert('添加成功');
+                closeModal();
+                loadProducts();
+            } else {
+                alert('添加失败: ' + (result.message || '未知错误'));
+            }
+        }
+        
+        async function editProduct(id) {
+            const result = await apiFetch('/api/admin/shop-products/' + id);
+            if (result.code !== 200 || !result.data) {
+                alert('获取商品信息失败');
+                return;
+            }
+            const p = result.data;
+            showModal("🏪 商品管理 - 编辑", `
+                <div style="display:grid;gap:12px">
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">商品名</label><input type="text" id="p-name" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" value="${p.name}"></div>
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">图标</label><input type="text" id="p-icon" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" value="${p.icon || '📿'}"></div>
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">描述</label><input type="text" id="p-desc" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" value="${p.description || ''}"></div>
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">类型</label><select id="p-type" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"><option value="incense_sticks" ${p.item_type==='incense_sticks'?'selected':''}>线香</option><option value="candles" ${p.item_type==='candles'?'selected':''}>红烛</option><option value="gold_paper" ${p.item_type==='gold_paper'?'selected':''}>金纸</option><option value="fruits" ${p.item_type==='fruits'?'selected':''}>供果</option><option value="gold" ${p.item_type==='gold'?'selected':''}>香火钱</option></select></div>
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">价格(香火钱)</label><input type="number" id="p-price" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" value="${p.price}"></div>
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">获得数量</label><input type="number" id="p-count" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" value="${p.item_count}"></div>
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">等级要求</label><input type="number" id="p-level" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" value="${p.level_req}"></div>
+                    <div><label style="display:block;margin-bottom:4px;color:#ccc">状态</label><select id="p-status" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"><option value="1" ${p.status===1?'selected':''}>上架</option><option value="0" ${p.status===0?'selected':''}>下架</option></select></div>
+                    <button onclick="saveProduct(${id})" style="padding:10px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold;margin-top:8px">保存</button>
+                </div>
+            `);
+        }
+        
+        async function saveProduct(id) {
+            const data = {
+                name: document.getElementById('p-name').value,
+                icon: document.getElementById('p-icon').value,
+                description: document.getElementById('p-desc').value,
+                price: parseInt(document.getElementById('p-price').value) || 0,
+                item_type: document.getElementById('p-type').value,
+                item_count: parseInt(document.getElementById('p-count').value) || 1,
+                level_req: parseInt(document.getElementById('p-level').value) || 1,
+                status: parseInt(document.getElementById('p-status').value) || 1
+            };
+            
+            const result = await apiFetch('/api/admin/shop-products/' + id, {
+                method: 'PUT',
+                body: JSON.stringify(data)
+            });
+            
+            if (result.code === 200) {
+                alert('更新成功');
+                closeModal();
+                loadProducts();
+            } else {
+                alert('更新失败: ' + (result.message || '未知错误'));
+            }
+        }
+        
+        async function deleteProduct(id) {
+            if (!confirm('确定要删除这个商品吗？')) return;
+            const result = await apiFetch('/api/admin/shop-products/' + id, { method: 'DELETE' });
+            if (result.code === 200) {
+                alert('删除成功');
+                loadProducts();
+            } else {
+                alert('删除失败: ' + (result.message || '未知错误'));
+            }
+        }
+        
+        function searchProducts() {
+            const kw = document.getElementById('products-search').value.trim().toLowerCase();
+            const rows = document.querySelectorAll('#products table tbody tr');
+            rows.forEach(r => {
+                r.style.display = r.textContent.toLowerCase().includes(kw) ? '' : 'none';
+            });
+        }
+        
+        let productsPage = 1;
+        function prevProductsPage() { productsPage--; loadProducts(productsPage); }
+        function nextProductsPage() { productsPage++; loadProducts(productsPage); }
 
         // ----- 🎒 道具管理 -----
         function searchItems() {
@@ -2574,19 +2682,155 @@
             }
         }
 
-        function viewRobot(playerId) {
-            const r = gRobots.find(r => r.player_id === playerId);
-            if (!r) return;
+        async function viewRobot(playerId) {
+            const data = await apiFetch('/api/robots/' + playerId);
+            if (!data || data.code !== 200) { showToast('获取数据失败', 'error'); return; }
+            const r = data.data;
             const now = Date.now();
             const hasShield = r.has_shield || (r.shield_end_at > now);
-            showDetailModal('🤖 ' + r.nickname, [
-                ['ID', r.player_id], ['名称', r.nickname], ['等级', r.level],
-                ['庙宇等级', r.temple_level], ['香火钱', r.gold || 0],
-                ['声望', r.reputation], ['庙宇存储', r.temple_storage || 0],
-                ['善缘', r.faith || 0], ['碎片', r.fragments || 0],
-                ['法力', r.mana || 100], ['被化缘次数', r.be_alms_count || 0],
-                ['护盾状态', hasShield ? '有' : '无']
-            ]);
+            const storageLimit = {1:5000,2:10000,3:18000,4:30000,5:50000};
+            const storagePct = Math.floor((r.temple_storage || 0) / storageLimit[r.level] * 100);
+            const body = `
+                <table style="width:100%;border-collapse:collapse">
+                    <tr><td style="padding:10px 12px;color:#888;width:120px">ID</td><td style="padding:10px 12px">${r.player_id}</td></tr>
+                    <tr><td style="padding:10px 12px;color:#888">名称</td><td style="padding:10px 12px">${r.nickname}</td></tr>
+                    <tr><td style="padding:10px 12px;color:#888">等级</td><td style="padding:10px 12px">Lv.${r.level}</td></tr>
+                    <tr><td style="padding:10px 12px;color:#888">香火钱</td><td style="padding:10px 12px">${(r.gold||0).toLocaleString()}</td></tr>
+                    <tr><td style="padding:10px 12px;color:#888">庙宇存储</td><td style="padding:10px 12px">${(r.temple_storage||0).toLocaleString()} / ${storageLimit[r.level].toLocaleString()} (${storagePct}%)</td></tr>
+                    <tr><td style="padding:10px 12px;color:#888">声望</td><td style="padding:10px 12px">${r.reputation||0}</td></tr>
+                    <tr><td style="padding:10px 12px;color:#888">善缘</td><td style="padding:10px 12px">${r.faith||0}</td></tr>
+                    <tr><td style="padding:10px 12px;color:#888">碎片</td><td style="padding:10px 12px">${r.fragments||0}</td></tr>
+                    <tr><td style="padding:10px 12px;color:#888">法力</td><td style="padding:10px 12px">${r.mana||100}</td></tr>
+                    <tr><td style="padding:10px 12px;color:#888">被化缘次数</td><td style="padding:10px 12px">${r.be_alms_count||0}</td></tr>
+                    <tr><td style="padding:10px 12px;color:#888">护盾状态</td><td style="padding:10px 12px">${hasShield?'有':'无'}</td></tr>
+                </table>
+                <div style="display:flex;gap:8px;margin-top:16px;padding:10px;background:#0f3460;border-radius:8px">
+                    <button class="btn btn-primary" onclick="doRobotCollect(${r.player_id})" style="flex:1">💰 收取香火</button>
+                    <button class="btn btn-primary" onclick="doRobotUpgrade(${r.player_id})" style="flex:1">🏛️ 升级庙宇</button>
+                    <button class="btn btn-primary" onclick="doRobotAlms(${r.player_id})" style="flex:1">🙏 化缘</button>
+                </div>
+            `;
+            showGlobalModal('🤖 ' + r.nickname, body);
+        }
+        
+        async function doRobotCollect(playerId) {
+            const r = gRobots.find(r => r.player_id == playerId);
+            if (!r) return;
+            const res = await apiFetch('/api/robots/' + playerId + '/collect', { method: 'POST' });
+            if (res.code === 200) {
+                showToast('收取成功：+' + res.data.collected.toLocaleString() + ' 香火钱', 'success');
+                closeGlobalModal();
+                loadRobots();
+            } else {
+                showToast(res.message || '操作失败', 'error');
+            }
+        }
+        
+        async function doRobotUpgrade(playerId) {
+            const res = await apiFetch('/api/robots/' + playerId + '/upgrade-temple', { method: 'POST' });
+            if (res.code === 200) {
+                showToast('升级成功：升至' + res.data.newLevel + '级，消耗' + res.data.cost.toLocaleString() + '金币', 'success');
+                closeGlobalModal();
+                loadRobots();
+            } else {
+                showToast(res.message || '操作失败', 'error');
+            }
+        }
+        
+        async function doRobotAlms(playerId) {
+            const res = await apiFetch('/api/robots/' + playerId + '/alms', { method: 'POST' });
+            if (res.code === 200) {
+                showToast('化缘成功：向 ' + res.data.target + ' 化缘获得 ' + res.data.amount.toLocaleString() + ' 香火', 'success');
+                closeGlobalModal();
+                loadRobots();
+            } else {
+                showToast(res.message || '操作失败', 'error');
+            }
+        }
+        
+        function showBatchRobotOps() {
+            const body = `
+                <div style="margin-bottom:16px">
+                    <p style="color:#888;margin-bottom:12px">选择要操作的机器人（可多选），然后点击下方按钮执行操作</p>
+                    <div style="margin-bottom:12px">
+                        <input type="checkbox" id="selectAllRobots" onchange="toggleSelectAllRobots()"> 
+                        <label for="selectAllRobots">全选</label>
+                        <span id="selectedCount" style="color:#f5a623;margin-left:12px">已选0个</span>
+                    </div>
+                    <div id="robotCheckboxes" style="max-height:300px;overflow-y:auto;background:#0f3460;border-radius:8px;padding:10px">
+                        ${gRobots.map(r => `
+                            <label style="display:block;padding:4px 0">
+                                <input type="checkbox" class="robot-cb" value="${r.player_id}" onchange="updateSelectedCount()"> 
+                                ${r.nickname} (Lv.${r.level}, ID:${r.player_id}, 庙${r.level}级)
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px">
+                    <button class="btn btn-primary" onclick="doBatchCollect()" style="flex:1">💰 批量收取香火</button>
+                    <button class="btn btn-primary" onclick="doBatchUpgrade()" style="flex:1">🏛️ 批量升级庙宇</button>
+                    <button class="btn btn-primary" onclick="doBatchAlms()" style="flex:1">🙏 批量化缘</button>
+                </div>
+            `;
+            showGlobalModal('🔧 批量操作机器人', body);
+        }
+        
+        function toggleSelectAllRobots() {
+            const checked = document.getElementById('selectAllRobots').checked;
+            document.querySelectorAll('.robot-cb').forEach(cb => cb.checked = checked);
+            updateSelectedCount();
+        }
+        
+        function updateSelectedCount() {
+            const checked = document.querySelectorAll('.robot-cb:checked').length;
+            document.getElementById('selectedCount').textContent = '已选' + checked + '个';
+        }
+        
+        function getSelectedRobotIds() {
+            return Array.from(document.querySelectorAll('.robot-cb:checked')).map(cb => parseInt(cb.value));
+        }
+        
+        async function doBatchCollect() {
+            const ids = getSelectedRobotIds();
+            if (ids.length === 0) { showToast('请先选择机器人', 'warn'); return; }
+            closeGlobalModal();
+            let success = 0, fail = 0;
+            for (const id of ids) {
+                const res = await apiFetch('/api/robots/' + id + '/collect', { method: 'POST' });
+                if (res.code === 200) success++; else fail++;
+            }
+            showToast('收取完成：成功' + success + '，失败' + fail, success > 0 ? 'success' : 'error');
+            loadRobots();
+        }
+        
+        async function doBatchUpgrade() {
+            const ids = getSelectedRobotIds();
+            if (ids.length === 0) { showToast('请先选择机器人', 'warn'); return; }
+            closeGlobalModal();
+            let success = 0, fail = 0, results = [];
+            for (const id of ids) {
+                const res = await apiFetch('/api/robots/' + id + '/upgrade-temple', { method: 'POST' });
+                if (res.code === 200) { success++; results.push(id + '→' + res.data.newLevel + '级'); }
+                else fail++;
+            }
+            showToast('升级完成：成功' + success + '，失败' + fail, success > 0 ? 'success' : 'error');
+            if (results.length > 0) console.log('升级结果:', results.join(', '));
+            loadRobots();
+        }
+        
+        async function doBatchAlms() {
+            const ids = getSelectedRobotIds();
+            if (ids.length === 0) { showToast('请先选择机器人', 'warn'); return; }
+            closeGlobalModal();
+            let success = 0, fail = 0, results = [];
+            for (const id of ids) {
+                const res = await apiFetch('/api/robots/' + id + '/alms', { method: 'POST' });
+                if (res.code === 200) { success++; results.push(res.data.target + '+' + res.data.amount); }
+                else fail++;
+            }
+            const detail = results.length > 0 ? '：' + results.slice(0, 3).join(', ') + (results.length > 3 ? '...' : '') : '';
+            showToast('化缘完成：成功' + success + '，失败' + fail + detail, success > 0 ? 'success' : 'error');
+            loadRobots();
         }
 
         function editRobot(playerId) {
@@ -2618,10 +2862,7 @@
                         <label style="width:80px;color:#888">庙宇存储</label>
                         <input type="number" id="editRobotStorage" value="${r.temple_storage || 0}" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
                     </div>
-                    <div style="display:flex;align-items:center;gap:10px">
-                        <label style="width:80px;color:#888">庙宇等级</label>
-                        <input type="number" id="editRobotTempleLv" value="${r.temple_level || 1}" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
-                    </div>
+
                     <div style="display:flex;align-items:center;gap:10px">
                         <label style="width:80px;color:#888">法力</label>
                         <input type="number" id="editRobotMana" value="${r.mana || 100}" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
@@ -2649,7 +2890,6 @@
                     gold: parseInt(document.getElementById('editRobotGold').value) || 0,
                     reputation: parseInt(document.getElementById('editRobotRep').value) || 0,
                     temple_storage: parseInt(document.getElementById('editRobotStorage').value) || 0,
-                    temple_level: parseInt(document.getElementById('editRobotTempleLv').value) || 1,
                     mana: parseInt(document.getElementById('editRobotMana').value) || 100,
                     has_shield: parseInt(document.getElementById('editRobotShield').value) || 0
                 })
@@ -2704,7 +2944,7 @@
                     </div>
                     <div style="display:flex;align-items:center;gap:10px">
                         <label style="width:80px;color:#888">等级</label>
-                        <input type="number" id="newRobotLevel" value="1" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
+                        <input type="number" id="newRobotLevel" value="1" min="1" max="5" style="flex:1;padding:8px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:4px">
                     </div>
                     <div style="display:flex;align-items:center;gap:10px">
                         <label style="width:80px;color:#888">庙宇存储</label>
@@ -2727,14 +2967,14 @@
                 showToast('请输入名称', 'warn');
                 return;
             }
+            const level = parseInt(document.getElementById('newRobotLevel').value) || 1;
             const res = await apiFetch('/api/robots', {
                 method: 'POST',
                 body: JSON.stringify({
                     player_id: playerId,
                     nickname: nickname,
-                    level: parseInt(document.getElementById('newRobotLevel').value) || 1,
-                    temple_storage: parseInt(document.getElementById('newRobotStorage').value) || 0,
-                    temple_level: 1
+                    level: level,
+                    temple_storage: parseInt(document.getElementById('newRobotStorage').value) || 0
                 })
             });
             if (res && res.code === 200) {
@@ -2809,7 +3049,7 @@
                         level: level,
                         gold: gold,
                         temple_storage: Math.floor(gold * 0.5),
-                        temple_level: level
+                        level: level
                     })
                 });
                 if (res && res.code === 200) ok++;
@@ -2985,26 +3225,40 @@ async function loadTrades(page = 1) {
 
 // --- 商品管理 ---
 async function loadProducts(page = 1) {
-    const data = await apiFetch('/api/shop/?page=' + page + '&limit=50');
+    productsPage = page;
+    const data = await apiFetch('/api/admin/shop-products?page=' + page + '&limit=20');
     const tbody = document.querySelector('#products table tbody');
     if (!tbody) return;
     if (!data || data.code !== 200) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u5546\u54c1\u6570\u636e</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#888;padding:20px">加载失败</td></tr>';
         return;
     }
-    const items = data.data.items || data.data || [];
+    const result = data.data || {};
+    const items = result.list || [];
     if (!items.length) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u5546\u54c1\u6570\u636e</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#888;padding:20px">暂无商品数据</td></tr>';
         return;
     }
+    const typeMap = {
+        'incense_sticks': '线香',
+        'candles': '红烛',
+        'gold_paper': '金纸',
+        'fruits': '供果',
+        'gold': '香火钱'
+    };
     tbody.innerHTML = items.map(i => '<tr>' +
-        '<td>' + (i.id || '-') + '</td>' +
-        '<td>' + (i.name || '-') + '</td>' +
-        '<td>' + (i.type || '-') + '</td>' +
-        '<td>' + (i.price || 0) + '</td>' +
-        '<td>' + (i.stock === -1 ? '\u65e0\u9650' : (i.stock || 0)) + '</td>' +
-        '<td><span class="badge badge-success">\u4e0a\u67b6</span></td>' +
+        '<td style="padding:10px">' + i.id + '</td>' +
+        '<td style="padding:10px">' + i.name + '</td>' +
+        '<td style="padding:10px">' + (i.icon || '📦') + '</td>' +
+        '<td style="padding:10px">' + (typeMap[i.item_type] || i.item_type) + '</td>' +
+        '<td style="padding:10px;color:#f5a623">💰 ' + i.price + '</td>' +
+        '<td style="padding:10px">x' + i.item_count + '</td>' +
+        '<td style="padding:10px">Lv.' + i.level_req + '</td>' +
+        '<td style="padding:10px"><span class="badge ' + (i.status === 1 ? 'badge-success' : 'badge-error') + '">' + (i.status === 1 ? '上架' : '下架') + '</span></td>' +
+        '<td style="padding:10px"><button onclick="editProduct(' + i.id + ')" style="padding:4px 8px;background:#4a90d9;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">编辑</button><button onclick="deleteProduct(' + i.id + ')" style="padding:4px 8px;background:#d94a4a;color:#fff;border:none;border-radius:4px;cursor:pointer">删除</button></td>' +
         '</tr>').join('');
+    document.getElementById('products-count').textContent = '共 ' + (result.total || 0) + ' 条';
+    document.getElementById('products-page-info').textContent = page + ' / ' + Math.ceil((result.total || 0) / 20);
 }
 
 // --- 道具管理 ---
@@ -3941,9 +4195,25 @@ async function updateSetting(input) {
 }
 
         // ROBOT_MODES 和 badge 映射统一在下方 changeRobotMode 区域定义
+        const ROBOT_PREFIXES = ['逍遥','剑侠','江湖','武林','红尘','碧落','苍穹','天地','乾坤','风云','雨露','霜雪','雷电','山河','日月','星辰','江南','塞北','东海','西域','一剑','无双','快意','淡泊','宁静','厚德','自强','上善','知足','心旷','怡然','神采','眉清','亭亭','翩翩','引吭','放声','欢天','喜气','万事','心想','大吉','福如','寿比','财源','金玉'];
+        const ROBOT_SUFFIXES = ['001','007','777','888','999','520','1314','168','088','9999','7777','666','8888','VIP','Pro','Max','Plus','Ultra','King','Queen','Ace','Boss','Master','Lord','Knight','Wizard','Hunter'];
 
         function randomRobotName() {
-            return ROBOT_SURNAMES[Math.floor(Math.random()*ROBOT_SURNAMES.length)] + ROBOT_NAMES[Math.floor(Math.random()*ROBOT_NAMES.length)];
+            const rand = Math.random();
+            // 30%概率：3字中文名（姓+名）
+            if (rand < 0.3) {
+                return ROBOT_SURNAMES[Math.floor(Math.random()*ROBOT_SURNAMES.length)] + 
+                       ROBOT_NAMES[Math.floor(Math.random()*ROBOT_NAMES.length)];
+            }
+            // 40%概率：4字中文名（前缀+名）
+            if (rand < 0.7) {
+                return ROBOT_PREFIXES[Math.floor(Math.random()*ROBOT_PREFIXES.length)] + 
+                       ROBOT_NAMES[Math.floor(Math.random()*ROBOT_NAMES.length)];
+            }
+            // 30%概率：英文名+数字后缀
+            const enNames = ['Dragon','Phoenix','Tiger','Wolf','Eagle','Falcon','Shadow','Storm','Thunder','Lightning','Fire','Ice','Water','Earth','Wind','Dark','Light','Star','Moon','Sun','Sky','Ocean','Forest','Mountain','River','Cosmic','Quantum','Cyber','Digital','Alpha','Beta','Gamma','Omega','Neo','Max','Pro','Elite','Master','Grand','Royal'];
+            return enNames[Math.floor(Math.random()*enNames.length)] + 
+                   ROBOT_SUFFIXES[Math.floor(Math.random()*ROBOT_SUFFIXES.length)];
         }
 
         function batchCreateRobots() {

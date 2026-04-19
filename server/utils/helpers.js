@@ -4,6 +4,7 @@
 
 // 统一成功响应
 function success(res, data = null, message = '成功') {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
   return res.json({ code: 200, message, data });
 }
 

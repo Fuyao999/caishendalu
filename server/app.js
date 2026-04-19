@@ -189,6 +189,56 @@ async function start() {
     console.log(`📡 地址: http://localhost:${PORT}`);
     console.log(`📋 健康检查: http://localhost:${PORT}/api/health`);
     console.log(`🔧 环境: ${process.env.NODE_ENV || 'development'}\n`);
+    
+    // 启动机器人香火钱自动产出定时任务（每分钟更新一次）
+    const { pool } = require('./config/database');
+    const STORAGE_LIMITS = {1:5000, 2:10000, 3:18000, 4:30000, 5:50000, 6:100000};
+    // 每分钟产出（TEMPLE_DATA每天产出/1440分钟）
+    const OUTPUT_PER_MIN = {1:1, 2:3, 3:4, 4:5, 5:6, 6:13};
+    
+    function updateRobotStorage() {
+      pool.query('SELECT player_id, level, temple_storage, updated_at FROM robots').then(([rows]) => {
+        rows.forEach(r => {
+          const now = Date.now();
+          const updatedAt = r.updated_at ? new Date(r.updated_at).getTime() : now;
+          const elapsedMs = now - updatedAt;
+          const elapsedHours = elapsedMs / (1000 * 60 * 60);
+          const hourlyOutput = (OUTPUT_PER_MIN[r.level] || 1) * 60;
+          const storageLimit = STORAGE_LIMITS[r.level] || 5000;
+          const newStorage = Math.min((r.temple_storage || 0) + Math.floor(hourlyOutput * elapsedHours), storageLimit);
+          if (newStorage !== r.temple_storage) {
+            pool.query('UPDATE robots SET temple_storage = ?, updated_at = ? WHERE player_id = ?', [newStorage, new Date(), r.player_id]);
+          }
+        });
+      }).catch(e => {});
+    }
+    
+    // 更新真实玩家庙宇存储产出（需要香火在燃烧状态）
+    function updatePlayerTempleStorage() {
+      const now = Date.now();
+      pool.query(
+        `SELECT user_id, level, temple_storage, incense_type, incense_end_at 
+         FROM player_data WHERE incense_type IS NOT NULL AND incense_end_at > ?`,
+        [now]
+      ).then(([rows]) => {
+        rows.forEach(p => {
+          const outputPerMinute = OUTPUT_PER_MIN[p.level] || 1;
+          const storageLimit = STORAGE_LIMITS[p.level] || 5000;
+          const newStorage = Math.min((p.temple_storage || 0) + Math.floor(outputPerMinute), storageLimit);
+          if (newStorage !== p.temple_storage) {
+            pool.query('UPDATE player_data SET temple_storage = ? WHERE user_id = ?', [newStorage, p.user_id]);
+          }
+        });
+      }).catch(e => { console.error('更新玩家庙宇产出失败:', e); });
+    }
+    
+    // 每分钟执行一次
+    updateRobotStorage();
+    updatePlayerTempleStorage();
+    setInterval(updateRobotStorage, 60000);
+    setInterval(updatePlayerTempleStorage, 60000);
+    console.log('🤖 机器人香火钱自动产出任务已启动（每分钟更新）');
+    console.log('🏛️ 玩家庙宇存储产出任务已启动（每分钟更新）');
   });
 }
 

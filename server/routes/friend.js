@@ -207,11 +207,19 @@ router.post('/visit/:friendId', authMiddleware, async (req, res) => {
         
         // 增加玩家善缘和声望
         await db.pool.query(
-            'UPDATE player_data SET merit = merit + 2, reputation = reputation + 1 WHERE user_id = ?',
+            'UPDATE player_data SET faith = faith + 2, reputation = reputation + 1 WHERE user_id = ?',
             [userId]
         );
         
         const newVisitCount = playerVisitCount + 1;
+        
+        // 获取更新后的faith和reputation
+        const [updatedRows] = await db.pool.query(
+            'SELECT faith, reputation FROM player_data WHERE user_id = ?',
+            [userId]
+        );
+        const newFaith = updatedRows[0]?.faith || 0;
+        const newReputation = updatedRows[0]?.reputation || 0;
         
         res.json({
             code: 200,
@@ -219,8 +227,10 @@ router.post('/visit/:friendId', authMiddleware, async (req, res) => {
             data: {
                 visitCount: newVisitCount,
                 maxVisit: 20,
-                meritGained: 2,
-                reputationGained: 1
+                faithGained: 2,
+                reputationGained: 1,
+                newFaith: newFaith,
+                newReputation: newReputation
             }
         });
         

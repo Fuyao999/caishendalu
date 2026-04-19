@@ -57,4 +57,40 @@ function generateToken(userId, username) {
   );
 }
 
-module.exports = { authMiddleware, optionalAuth, generateToken };
+// 验证管理员Token
+function adminMiddleware(req, res, next) {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ 
+      code: 401, 
+      message: '未登录或Token无效' 
+    });
+  }
+  
+  const token = authHeader.substring(7);
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    req.userId = decoded.userId;
+    
+    // 验证是否是管理员
+    const [admins] = pool.query('SELECT id FROM admin_users WHERE username = ?', [decoded.username]);
+    if (admins.length === 0) {
+      return res.status(403).json({ 
+        code: 403, 
+        message: '无权限访问' 
+      });
+    }
+    
+    next();
+  } catch (err) {
+    return res.status(401).json({ 
+      code: 401, 
+      message: 'Token已过期或无效'
+    });
+  }
+}
+
+module.exports = { authMiddleware, optionalAuth, generateToken, adminMiddleware };

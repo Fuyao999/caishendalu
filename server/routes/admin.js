@@ -354,4 +354,82 @@ router.post('/alms-config', authMiddleware, adminCheck, async (req, res, next) =
   } catch (err) { next(err); }
 });
 
+// ==================== 商品管理 ====================
+
+// 获取商品列表
+router.get('/shop-products', authMiddleware, adminCheck, async (req, res, next) => {
+  try {
+    const { page = 1, limit = 20, search = '' } = req.query;
+    const offset = (page - 1) * limit;
+    
+    let whereSql = '';
+    let params = [];
+    
+    if (search) {
+      whereSql = 'WHERE name LIKE ? OR item_type LIKE ?';
+      params = [`%${search}%`, `%${search}%`];
+    }
+    
+    const [rows] = await pool.query(
+      `SELECT * FROM shop_products ${whereSql} ORDER BY sort_order ASC LIMIT ? OFFSET ?`,
+      [...params, parseInt(limit), offset]
+    );
+    
+    const [countResult] = await pool.query(
+      `SELECT COUNT(*) as total FROM shop_products ${whereSql}`,
+      params
+    );
+    
+    return success(res, {
+      list: rows,
+      total: countResult[0].total,
+      page: parseInt(page),
+      limit: parseInt(limit)
+    });
+  } catch (err) { next(err); }
+});
+
+// 新增商品
+router.post('/shop-products', authMiddleware, adminCheck, async (req, res, next) => {
+  try {
+    const { name, icon, description, price, cost, item_type, item_count, level_req, status, sort_order } = req.body;
+    
+    if (!name || !price || !item_type) {
+      return fail(res, '商品名、价格、物品类型不能为空');
+    }
+    
+    const [result] = await pool.query(
+      `INSERT INTO shop_products (name, icon, description, price, cost, item_type, item_count, level_req, status, sort_order) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [name, icon || '📦', description || '', price, cost || 0, item_type, item_count || 1, level_req || 1, status || 1, sort_order || 0]
+    );
+    
+    return success(res, { id: result.insertId }, '添加成功');
+  } catch (err) { next(err); }
+});
+
+// 更新商品
+router.put('/shop-products/:id', authMiddleware, adminCheck, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { name, icon, description, price, cost, item_type, item_count, level_req, status, sort_order } = req.body;
+    
+    await pool.query(
+      `UPDATE shop_products SET name=?, icon=?, description=?, price=?, cost=?, item_type=?, item_count=?, level_req=?, status=?, sort_order=? WHERE id=?`,
+      [name, icon, description, price, cost, item_type, item_count, level_req, status, sort_order, id]
+    );
+    
+    return success(res, null, '更新成功');
+  } catch (err) { next(err); }
+});
+
+// 删除商品
+router.delete('/shop-products/:id', authMiddleware, adminCheck, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM shop_products WHERE id = ?', [id]);
+    return success(res, null, '删除成功');
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

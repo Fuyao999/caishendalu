@@ -57,7 +57,6 @@ CREATE TABLE IF NOT EXISTS player_data (
   sign_streak     INT          NOT NULL DEFAULT 0 COMMENT '连续签到天数',
   total_sign      INT          NOT NULL DEFAULT 0,
   alms_miss_streak INT         NOT NULL DEFAULT 0 COMMENT '化缘连亏次数(保底)',
-  temple_level    INT          NOT NULL DEFAULT 1,
   temple_storage  BIGINT       NOT NULL DEFAULT 5000,
   merit          INT          NOT NULL DEFAULT 0 COMMENT '功德',
   faith          INT          NOT NULL DEFAULT 0 COMMENT '信仰',

@@ -18,10 +18,10 @@ router.get('/', authMiddleware, async (req, res, next) => {
     );
     // 查厢房容量
     const [player] = await pool.query(
-      'SELECT temple_level, temple_storage FROM player_data WHERE user_id = ?',
+      'SELECT level, temple_storage FROM player_data WHERE user_id = ?',
       [req.userId]
     );
-    const capacity = 20 + (player[0]?.temple_level || 1) * 10; // 基础20格 + 庙宇等级*10
+    const capacity = 20 + (player[0]?.level || 1) * 10; // 基础20格 + 庙宇等级*10
     return success(res, { items: rows, capacity, used: rows.length }, '厢房查询成功');
   } catch (err) { next(err); }
 });
@@ -42,9 +42,9 @@ router.post('/store', authMiddleware, async (req, res, next) => {
 
     // 检查厢房容量
     const [player] = await pool.query(
-      'SELECT temple_level FROM player_data WHERE user_id = ?', [req.userId]
+      'SELECT level FROM player_data WHERE user_id = ?', [req.userId]
     );
-    const capacity = 20 + (player[0]?.temple_level || 1) * 10;
+    const capacity = 20 + (player[0]?.level || 1) * 10;
     const [srCount] = await pool.query(
       'SELECT COUNT(*) AS cnt FROM side_room WHERE user_id = ?', [req.userId]
     );

@@ -20,6 +20,20 @@ const AREAS = {
   liquan:  { name: '流泉', threshold: 99999,  order: 8 },
 };
 
+// 财神类型定义（用于过滤庇佑加成适用性）
+// type: money=香火钱加成, alms=化缘加成, cap=存储上限, risk=风险降低
+const GOD_TYPES = {
+  tudigong: 'money',     // 土地公: 香火钱+10%
+  guanyu: 'alms',        // 关羽: 化缘收益+15%
+  yaoshaosi: 'alms',     // 姚少司: 化缘30次
+  chenjiugong: 'cap',    // 陈九公: 香火钱上限+500
+  fanli: 'money',        // 范蠡: 香火钱+20%
+  caobao: 'risk',        // 曹宝: 化缘风险-10%
+  liuhai: 'money',       // 刘海: 香火钱+15%
+  xiaosheng: 'alms',     // 萧升: 化缘收益+20%
+  zhaogongming: 'money'  // 赵公明: 香火钱+25%
+};
+
 // 内存缓存（5秒过期）
 let _cfgCache = null;
 let _cfgCacheTime = 0;
@@ -104,6 +118,22 @@ router.get('/status', authMiddleware, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// POST /api/alms/worship - 执行供奉
+router.post('/worship', authMiddleware, async (req, res, next) => {
+  console.log('[供奉] 收到请求, userId:', req.userId, 'body:', JSON.stringify(req.body));
+  try {
+    const { godId, type } = req.body;
+    
+    await pool.query(
+      'UPDATE player_data SET worship_count = worship_count + 1 WHERE user_id = ?',
+      [req.userId]
+    );
+    console.log('[供奉] worship_count +1 完成');
+    
+    return success(res, { worship_count: 'ok' });
+  } catch (err) { next(err); }
+});
+
 // POST /api/alms/go - 执行化缘
 router.post('/go', authMiddleware, async (req, res, next) => {
   try {
@@ -119,7 +149,7 @@ router.post('/go', authMiddleware, async (req, res, next) => {
     const isGamble = areaMeta.order >= 7;
 
     const [rows] = await pool.query(
-      `SELECT pd.gold, pd.mana, pd.daily_alms, pd.alms_miss_streak, pd.merit, pd.fragments, pd.reputation,
+      `SELECT pd.gold, pd.mana, pd.daily_alms, pd.alms_miss_streak, pd.merit, pd.fragments, pd.reputation, pd.deity_buff, pd.deity_order,
               (SELECT COUNT(*) FROM logs WHERE user_id = ? AND action = 'alms' AND JSON_EXTRACT(detail, '$.area') = ?) AS area_visit_count
        FROM player_data pd WHERE pd.user_id = ?`,
       [req.userId, area, req.userId]
@@ -196,14 +226,58 @@ router.post('/go', authMiddleware, async (req, res, next) => {
     const isMiss = resultKey === 'MS' || resultKey === 'L2';
     const newMissStreak = isMiss ? p.alms_miss_streak + 1 : 0;
 
+    // 庇佑加成
+    let usedBlessing = null;
+    let blessingBonus = 0;
+    let deityBuff = p.deity_buff;
+    if (deityBuff && typeof deityBuff === 'string') {
+      try { deityBuff = JSON.parse(deityBuff); } catch(e) { deityBuff = null; }
+    }
+    if (deityBuff && typeof deityBuff === 'object') {
+      let order = [];
+      try {
+        if (p.deity_order) {
+          order = typeof p.deity_order === 'string' ? JSON.parse(p.deity_order) : p.deity_order;
+        }
+      } catch(e) { order = []; }
+      if (!order || order.length === 0) {
+        order = Object.keys(deityBuff).filter(k => k !== 'order');
+      }
+      for (const godId of order) {
+        const godType = GOD_TYPES[godId];
+        // 跳过cap类型的财神（如陈九公）
+        if (godType === 'cap') continue;
+        if (deityBuff[godId] && deityBuff[godId].count > 0) {
+          usedBlessing = godId;
+          blessingBonus = deityBuff[godId].bonus || 0;
+          deityBuff[godId].count -= 1;
+          if (deityBuff[godId].count <= 0) delete deityBuff[godId];
+          break;
+        }
+      }
+    }
+
+    // 应用庇佑加成到 netGain（仅对盈利结果生效）
+    const originalNetGain = netGain;
+    if (usedBlessing && netGain > 0) {
+      netGain = blessingBonus > 0 && blessingBonus < 1
+        ? Math.floor(netGain * (1 + blessingBonus))
+        : netGain + Math.floor(blessingBonus);
+    }
+
     // 8个区不加声望，只有碎片
     const repGain = 0;
     const fragGain = resultKey === 'JP' ? 3 : resultKey === 'W2' ? 5 : 0;
+    // 大吉时增加great_count
+    const isGreat = resultKey === 'JP' || resultKey === 'W2';
+    console.log('[化缘] userId:', req.userId, 'alms_count+1, isGreat:', isGreat, 'resultKey:', resultKey);
+    console.log('[化缘] SQL:', `UPDATE player_data SET gold = gold + ?, mana = mana - ?, daily_alms = daily_alms - 1, alms_miss_streak = ?, merit = merit + ?, reputation = reputation + ?, fragments = fragments + ?, alms_count = alms_count + 1${isGreat ? ', great_count = great_count + 1' : ''}, deity_buff = ? WHERE user_id = ?`);
 
     await pool.query(
-      `UPDATE player_data SET gold = gold + ?, mana = mana - ?, daily_alms = daily_alms - 1, alms_miss_streak = ?, merit = merit + ?, reputation = reputation + ?, fragments = fragments + ? WHERE user_id = ?`,
-      [netGain, manaCost, newMissStreak, cfg.activeAlmsMerit || 5, repGain, fragGain, req.userId]
+      `UPDATE player_data SET gold = gold + ?, mana = mana - ?, daily_alms = daily_alms - 1, alms_miss_streak = ?, merit = merit + ?, reputation = reputation + ?, fragments = fragments + ?, alms_count = alms_count + 1${isGreat ? ', great_count = great_count + 1' : ''}, deity_buff = ? WHERE user_id = ?`,
+      [netGain, manaCost, newMissStreak, cfg.activeAlmsMerit || 5, repGain, fragGain, JSON.stringify(deityBuff), req.userId]
     );
+    console.log('[化缘] UPDATE执行完成');
 
     await pool.query(
       'INSERT INTO logs (user_id, action, detail) VALUES (?, ?, ?)',
@@ -222,6 +296,7 @@ router.post('/go', authMiddleware, async (req, res, next) => {
       result: resultKey,
       resultName: resultNames[resultKey],
       netGain,
+      blessingBoost: usedBlessing ? (netGain - originalNetGain) : 0,
       remainAlms: p.daily_alms - 1,
       newGold: p.gold + netGain,
       newMana: p.mana - manaCost,
@@ -231,6 +306,9 @@ router.post('/go', authMiddleware, async (req, res, next) => {
       fragGain: fragGain,
       fragBonus: fragGain > 0,
       missStreak: newMissStreak,
+      usedBlessing,
+      blessingBonus,
+      deityBuff: usedBlessing ? deityBuff : null,
     }, `${areaMeta.name}化缘 —— ${resultNames[resultKey]}！`);
 
   } catch (err) { next(err); }
@@ -277,8 +355,8 @@ router.post('/passive', authMiddleware, async (req, res, next) => {
 
     // 获取化缘者(A)数据
     const [almserRows] = await pool.query(
-      `SELECT pd.user_id, pd.player_id, pd.gold, pd.temple_level, pd.level, pd.reputation,
-              pd.temple_storage, pd.be_alms_count, pd.shield_end_at
+      `SELECT pd.user_id, pd.player_id, pd.gold, pd.level, pd.reputation,
+              pd.temple_storage, pd.be_alms_count, pd.shield_end_at, pd.deity_buff, pd.deity_order
        FROM player_data pd WHERE pd.user_id = ?`,
       [userId]
     );
@@ -294,7 +372,7 @@ router.post('/passive', authMiddleware, async (req, res, next) => {
 
     // 获取被化缘者(B)数据
     const [targetRows] = await pool.query(
-      `SELECT user_id, player_id, nickname, gold, temple_level, level, reputation,
+      `SELECT user_id, player_id, nickname, gold, level, reputation,
               temple_storage, faith, fragments, be_alms_count, shield_end_at
        FROM player_data WHERE player_id = ?`,
       [targetPlayerId]
@@ -306,14 +384,14 @@ router.post('/passive', authMiddleware, async (req, res, next) => {
     if (target.user_id === userId) return fail(res, '不能化缘自己');
 
     // 计算被化缘者(B)的存储上限
-    const storageLimit = 20 + (target.temple_level || 1) * 10;
+    const storageLimit = 20 + (target.level || 1) * 10;
 
     // 声誉加成 = floor(化缘者声望 / 10)
     const reputationBonus = Math.floor(almser.reputation / 10);
 
     // 基础上限（按化缘者庙宇等级）
     const baseLimits = { 1: 30, 2: 50, 3: 80, 4: 120, 5: 180 };
-    const baseLimit = baseLimits[almser.temple_level] || 30;
+    const baseLimit = baseLimits[almser.level] || 30;
 
     // 等级差系数 = 1 + (被化缘者等级 - 化缘者等级) * 0.1
     const levelDiffCoeff = 1 + (target.level - almser.level) * 0.1;
@@ -323,8 +401,61 @@ router.post('/passive', authMiddleware, async (req, res, next) => {
       ? Math.min(target.temple_storage / storageLimit, 2.0)
       : 0;
 
-    // 化缘金额 = floor(基础上限 * 等级差系数 * 储量系数 + 声誉加成)
-    const almsAmount = Math.max(0, Math.floor(baseLimit * levelDiffCoeff * storageRatio + reputationBonus));
+    // 检查并使用财神庇佑
+    let usedBlessing = null;
+    let blessingBonus = 0;
+    let deityBuff = almser.deity_buff;
+    if (deityBuff && typeof deityBuff === 'string') {
+      try {
+        deityBuff = JSON.parse(deityBuff);
+      } catch(e) { deityBuff = null; }
+    }
+    if (deityBuff && typeof deityBuff === 'object') {
+      // 从deity_order获取顺序，按顺序找第一个有count的财神
+      let order = [];
+      try {
+        if (almser.deity_order) {
+          order = typeof almser.deity_order === 'string' ? JSON.parse(almser.deity_order) : almser.deity_order;
+        }
+      } catch(e) { order = []; }
+      if (!order || order.length === 0) {
+        order = Object.keys(deityBuff).filter(k => k !== 'order');
+      }
+      usedBlessing = null;
+      blessingBonus = 0;
+      for (const godId of order) {
+        const godType = GOD_TYPES[godId];
+        // 跳过cap类型的财神（如陈九公：香火钱上限加成不适用于化缘金额）
+        if (godType === 'cap') continue;
+        if (deityBuff[godId] && deityBuff[godId].count > 0) {
+          usedBlessing = godId;
+          blessingBonus = deityBuff[godId].bonus || 0;
+          deityBuff[godId].count -= 1;
+          if (deityBuff[godId].count <= 0) {
+            delete deityBuff[godId];
+          }
+          break;
+        }
+      }
+      if (!usedBlessing) {
+        blessingBonus = 0;
+      }
+    }
+
+    // 化缘金额 = floor(基础上限 * 等级差系数 * 储量系数 + 声誉加成) + 庇佑加成
+    const baseAmount = Math.max(0, Math.floor(baseLimit * levelDiffCoeff * storageRatio + reputationBonus));
+    // blessingBonus: <1按百分比(0.1=10%)，>=1按固定值
+    const almsAmount = blessingBonus > 0 && blessingBonus < 1
+      ? Math.floor(baseAmount * (1 + blessingBonus))
+      : baseAmount + Math.floor(blessingBonus);
+
+    // 保存更新后的 deity_buff
+    if (usedBlessing) {
+      await pool.query(
+        'UPDATE player_data SET deity_buff = ? WHERE user_id = ?',
+        [JSON.stringify(deityBuff), userId]
+      );
+    }
 
     // 被化缘者扣钱
     if (target.temple_storage < almsAmount) {
@@ -395,6 +526,9 @@ router.post('/passive', authMiddleware, async (req, res, next) => {
       newBeAlmsCount,
       shieldActivated,
       shieldEndAt: newShieldEndAt,
+      usedBlessing,
+      blessingBonus,
+      deityBuff: usedBlessing ? deityBuff : null,
     }, `向${target.nickname}化缘成功！获得${almsAmount}香火钱`);
 
   } catch (err) { next(err); }
