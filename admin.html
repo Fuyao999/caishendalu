@@ -376,6 +376,7 @@
                 <li onclick="showPage('equipmgr')"><span>🗡️ 装备管理</span></li>
                 <li onclick="showPage('domains')"><span>🌍 财域管理</span></li>
                 <li onclick="showPage('quests')"><span>🏆 任务成就</span></li>
+                <li onclick="showPage('titles')"><span>🎖️ 称号管理</span></li>
                 <li onclick="showPage('decoration')"><span>🎨 装修管理</span></li>
                 <li onclick="showPage('almsconfig')"><span>💰 化缘数值</span></li>
 
@@ -1583,6 +1584,32 @@
                 </div>
             </div>
 
+            <!-- 🏆 称号管理页面 -->
+            <div id="titles" class="page" style="display:none">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <h2 style="margin:0">🏆 称号管理</h2>
+                    <div>
+                        <button onclick="addTitle()" 
+                                style="padding:8px 16px;background:#2ecc71;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold">
+                            + 新增称号
+                        </button>
+                    </div>
+                </div>
+                <div style="background:#2a2a2a;border-radius:8px;overflow:hidden">
+                    <table style="width:100%;border-collapse:collapse">
+                        <thead>
+                            <tr style="background:#333">
+                                <th style="padding:12px;text-align:left;color:#f5a623">ID</th>
+                                <th>图标</th><th>名称</th><th>描述</th><th>加成</th><th>解锁人数</th><th>状态</th><th style="padding:12px;text-align:left">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="titles-table-body">
+                            <tr><td colspan="8" style="padding:20px;text-align:center;color:#888">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- 🎨 装修管理页面 -->
             <div id="decoration" class="page" style="display:none">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
@@ -2496,15 +2523,116 @@
             rows.forEach(function(r) { r.style.display = r.textContent.toLowerCase().includes(kw) ? "" : "none"; });
         }
         function addQuests() {
-            showModal("🏆 任务成就 - 新增", `
-                <div style="display:grid;gap:12px">
-                    <div><label style="display:block;margin-bottom:4px;color:#ccc">名称</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="名称"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">类型</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="类型"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">描述</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" name="description" name="description" placeholder="描述"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">奖励</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="奖励"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">完成条件</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="完成条件"></div><div><label style="display:block;margin-bottom:4px;color:#ccc">完成人数</label><input type="text" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px" placeholder="完成人数"></div>
-                    <button onclick="saveModalForm('/api/quests/', loadQuests)" style="padding:10px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold;margin-top:8px">保存</button>
-                </div>
-            `);
+            addQuest();
         }
         function prevQuestsPage() { console.log("quests prev page"); }
         function nextQuestsPage() { console.log("quests next page"); }
+
+// --- 称号管理 ---
+async function loadTitles() {
+    const data = await apiFetch('/api/admin/titles');
+    const tbody = document.querySelector('#titles table tbody');
+    if (!tbody) return;
+    if (!data || data.code !== 200) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;padding:20px">加载失败</td></tr>';
+        return;
+    }
+    const items = data.data || [];
+    if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;padding:20px">暂无称号数据</td></tr>';
+        return;
+    }
+    tbody.innerHTML = items.map(t => '<tr>' +
+        '<td style="padding:8px">' + t.id + '</td>' +
+        '<td style="padding:8px;font-size:20px">' + (t.icon || '🏆') + '</td>' +
+        '<td style="padding:8px;color:#f5a623">' + (t.name || '-') + '</td>' +
+        '<td style="padding:8px;color:#aaa">' + (t.desc || '-') + '</td>' +
+        '<td style="padding:8px;color:#2ecc71">' + (t.bonus || '-') + '</td>' +
+        '<td style="padding:8px"><span class="badge badge-success">' + (t.unlock_count||0) + '</span></td>' +
+        '<td style="padding:8px">' + (t.is_active ? '<span style="color:#2ecc71">启用</span>' : '<span style="color:#e74c3c">停用</span>') + '</td>' +
+        '<td style="padding:8px"><button onclick="editTitle(\'' + t.id + '\')" style="padding:4px 8px;background:#3498db;color:#fff;border:none;border-radius:4px;cursor:pointer">编辑</button></td>' +
+        '</tr>').join('');
+}
+
+function editTitle(id) {
+    const titles = window._titlesCache || [];
+    const t = titles.find(t => t.id === id);
+    if (!t) return;
+    showModal('编辑称号: ' + t.name, `
+        <div style="display:grid;gap:10px;text-align:left">
+            <div><label style="color:#ccc">ID</label><input type="text" id="et-id" value="${t.id}" readonly style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#888;border-radius:4px"></div>
+            <div><label style="color:#ccc">图标</label><input type="text" id="et-icon" value="${t.icon || '🏆'}" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            <div><label style="color:#ccc">名称</label><input type="text" id="et-name" value="${t.name || ''}" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            <div><label style="color:#ccc">描述</label><input type="text" id="et-desc" value="${t.desc || ''}" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            <div><label style="color:#ccc">属性加成</label><input type="text" id="et-bonus" value="${t.bonus || ''}" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            <div><label style="color:#ccc">排序</label><input type="number" id="et-sort_order" value="${t.sort_order || 0}" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            <button onclick="saveTitle()" style="padding:10px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold;margin-top:8px">保存</button>
+        </div>
+    `);
+    window._editTitleId = id;
+}
+
+async function saveTitle() {
+    const id = window._editTitleId;
+    if (!id) return;
+    const data = {
+        id: document.getElementById('et-id').value,
+        icon: document.getElementById('et-icon').value,
+        name: document.getElementById('et-name').value,
+        desc: document.getElementById('et-desc').value,
+        bonus: document.getElementById('et-bonus').value,
+        sort_order: parseInt(document.getElementById('et-sort_order').value) || 0
+    };
+    const result = await apiFetch('/api/admin/titles', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    });
+    if (result && result.code === 200) {
+        closeModal();
+        loadTitles();
+    } else {
+        alert('保存失败: ' + (result?.message || '未知错误'));
+    }
+}
+
+async function addTitle() {
+    showModal('新增称号', `
+        <div style="display:grid;gap:10px;text-align:left">
+            <div><label style="color:#ccc">ID</label><input type="text" id="at-id" placeholder="唯一ID如: yingcaishen" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            <div><label style="color:#ccc">图标</label><input type="text" id="at-icon" value="🏆" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            <div><label style="color:#ccc">名称</label><input type="text" id="at-name" placeholder="如: 迎财神" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            <div><label style="color:#ccc">描述</label><input type="text" id="at-desc" placeholder="如: 初来乍到，喜迎财神" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            <div><label style="color:#ccc">属性加成</label><input type="text" id="at-bonus" placeholder="如: 香火钱产出+5%" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            <div><label style="color:#ccc">排序</label><input type="number" id="at-sort_order" value="0" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            <button onclick="saveNewTitle()" style="padding:10px;background:#2ecc71;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;margin-top:8px">创建</button>
+        </div>
+    `);
+}
+
+async function saveNewTitle() {
+    const data = {
+        id: document.getElementById('at-id').value,
+        icon: document.getElementById('at-icon').value,
+        name: document.getElementById('at-name').value,
+        desc: document.getElementById('at-desc').value,
+        bonus: document.getElementById('at-bonus').value,
+        sort_order: parseInt(document.getElementById('at-sort_order').value) || 0
+    };
+    if (!data.id || !data.name || !data.desc || !data.bonus) {
+        alert('请填写必填字段');
+        return;
+    }
+    const result = await apiFetch('/api/admin/titles', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    });
+    if (result && result.code === 200) {
+        closeModal();
+        loadTitles();
+    } else {
+        alert('创建失败: ' + (result?.message || '未知错误'));
+    }
+}
 
         // ----- 🎨 装修管理 -----
         function searchDecoration() {
@@ -3520,6 +3648,7 @@ async function loadAntiCheat(page = 1) {
                 case 'stories': loadStories(); break;
                 case 'domains': loadDomains(); break;
                 case 'quests': loadQuests(); break;
+                case 'titles': loadTitles(); break;
                 case 'decoration': loadDecoration(); break;
                 case 'almsconfig': loadAlmsConfig(); break;
                 case 'analytics': loadAnalytics(); break;
@@ -3790,24 +3919,134 @@ async function loadDomains() {
 
 // --- 任务成就管理 ---
 async function loadQuests() {
-    const data = await apiFetch('/api/quests/');
+    const data = await apiFetch('/api/admin/quests?limit=100');
     const tbody = document.querySelector('#quests table tbody');
     if (!tbody) return;
     if (!data || data.code !== 200) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u4efb\u52a1\u6570\u636e</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;padding:20px">加载失败</td></tr>';
         return;
     }
     const items = data.data.quests || [];
     if (!items.length) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px">\u6682\u65e0\u4efb\u52a1\u6570\u636e</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;padding:20px">暂无任务数据</td></tr>';
         return;
     }
-    var typeColors = {daily:'badge-info',weekly:'badge-primary',main:'badge-warning',side:'badge-success',achievement:'badge-danger'};
+    var typeColors = {daily:'badge-info',weekly:'badge-primary',main:'badge-warning',achievement:'badge-danger'};
     tbody.innerHTML = items.map(q => '<tr>' +
-        '<td>' + q.id + '</td>' +
-        '<td>' + (q.name || '-') + '</td>' +
-        '<td><span class="badge ' + (typeColors[q.type]||'badge-info') + '">' + (q.type || '-') + '</span></td>' +
-        '<td>' + (q.target_type || '-') + ' x' + (q.target_count || 1) + '</td>' +
+        '<td style="padding:8px">' + q.id + '</td>' +
+        '<td style="padding:8px">' + (q.title_id ? '<span style="color:#f5a623">[' + (q.title_name||q.title_id) + ']</span> ' : '') + (q.name || '-') + '</td>' +
+        '<td style="padding:8px"><span class="badge ' + (typeColors[q.type]||'badge-info') + '">' + (q.type || '-') + '</span></td>' +
+        '<td style="padding:8px">' + (q.target_type || '-') + ' x' + (q.target_count || 1) + '</td>' +
+        '<td style="padding:8px">' + (q.reward_gold||0) + '金/' + (q.reward_fragment||0) + '碎/' + (q.reward_merit||0) + '功</td>' +
+        '<td style="padding:8px"><span class="badge badge-success">' + (q.completion_count||0) + '</span></td>' +
+        '<td style="padding:8px">' + (q.is_active ? '<span style="color:#2ecc71">启用</span>' : '<span style="color:#e74c3c">停用</span>') + '</td>' +
+        '<td style="padding:8px"><button onclick="editQuest(\'' + q.id + '\')" style="padding:4px 8px;background:#3498db;color:#fff;border:none;border-radius:4px;cursor:pointer">编辑</button></td>' +
+        '</tr>').join('');
+}
+
+function editQuest(id) {
+    const quests = window._questsCache || [];
+    const q = quests.find(q => q.id === id);
+    if (!q) return;
+    showModal('编辑任务: ' + q.name, `
+        <div style="display:grid;gap:10px;text-align:left">
+            <div><label style="color:#ccc">ID</label><input type="text" id="eq-id" value="${q.id}" readonly style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#888;border-radius:4px"></div>
+            <div><label style="color:#ccc">名称</label><input type="text" id="eq-name" value="${q.name || ''}" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            <div><label style="color:#ccc">类型</label><select id="eq-type" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"><option value="daily" ${q.type==='daily'?'selected':''}>每日</option><option value="achievement" ${q.type==='achievement'?'selected':''}>成就</option></select></div>
+            <div><label style="color:#ccc">目标类型</label><input type="text" id="eq-target_type" value="${q.target_type || ''}" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            <div><label style="color:#ccc">目标数量</label><input type="number" id="eq-target_count" value="${q.target_count || 1}" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+                <div><label style="color:#ccc">奖励金</label><input type="number" id="eq-reward_gold" value="${q.reward_gold||0}" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+                <div><label style="color:#ccc">奖励碎片</label><input type="number" id="eq-reward_fragment" value="${q.reward_fragment||0}" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+                <div><label style="color:#ccc">奖励功德</label><input type="number" id="eq-reward_merit" value="${q.reward_merit||0}" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div><label style="color:#ccc">奖励线香</label><input type="number" id="eq-reward_incense" value="${q.reward_incense||0}" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+                <div><label style="color:#ccc">奖励红烛</label><input type="number" id="eq-reward_candle" value="${q.reward_candle||0}" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            </div>
+            <button onclick="saveQuest()" style="padding:10px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold;margin-top:8px">保存</button>
+        </div>
+    `);
+    window._editQuestId = id;
+}
+
+async function saveQuest() {
+    const id = window._editQuestId;
+    if (!id) return;
+    const data = {
+        id: document.getElementById('eq-id').value,
+        name: document.getElementById('eq-name').value,
+        type: document.getElementById('eq-type').value,
+        target_type: document.getElementById('eq-target_type').value,
+        target_count: parseInt(document.getElementById('eq-target_count').value) || 1,
+        reward_gold: parseInt(document.getElementById('eq-reward_gold').value) || 0,
+        reward_fragment: parseInt(document.getElementById('eq-reward_fragment').value) || 0,
+        reward_merit: parseInt(document.getElementById('eq-reward_merit').value) || 0,
+        reward_incense: parseInt(document.getElementById('eq-reward_incense').value) || 0,
+        reward_candle: parseInt(document.getElementById('eq-reward_candle').value) || 0
+    };
+    const result = await apiFetch('/api/admin/quests', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    });
+    if (result && result.code === 200) {
+        closeModal();
+        loadQuests();
+    } else {
+        alert('保存失败: ' + (result?.message || '未知错误'));
+    }
+}
+
+async function addQuest() {
+    showModal('新增任务', `
+        <div style="display:grid;gap:10px;text-align:left">
+            <div><label style="color:#ccc">ID</label><input type="text" id="aq-id" placeholder="唯一ID如: daily_login2" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            <div><label style="color:#ccc">名称</label><input type="text" id="aq-name" placeholder="任务名称" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            <div><label style="color:#ccc">类型</label><select id="aq-type" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"><option value="daily">每日</option><option value="achievement">成就</option></select></div>
+            <div><label style="color:#ccc">目标类型</label><input type="text" id="aq-target_type" placeholder="如: login_days, alms_today" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            <div><label style="color:#ccc">目标数量</label><input type="number" id="aq-target_count" value="1" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+                <div><label style="color:#ccc">奖励金</label><input type="number" id="aq-reward_gold" value="0" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+                <div><label style="color:#ccc">奖励碎片</label><input type="number" id="aq-reward_fragment" value="0" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+                <div><label style="color:#ccc">奖励功德</label><input type="number" id="aq-reward_merit" value="0" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div><label style="color:#ccc">奖励线香</label><input type="number" id="aq-reward_incense" value="0" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+                <div><label style="color:#ccc">奖励红烛</label><input type="number" id="aq-reward_candle" value="0" style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#fff;border-radius:4px"></div>
+            </div>
+            <button onclick="saveNewQuest()" style="padding:10px;background:#2ecc71;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;margin-top:8px">创建</button>
+        </div>
+    `);
+}
+
+async function saveNewQuest() {
+    const data = {
+        id: document.getElementById('aq-id').value,
+        name: document.getElementById('aq-name').value,
+        type: document.getElementById('aq-type').value,
+        target_type: document.getElementById('aq-target_type').value,
+        target_count: parseInt(document.getElementById('aq-target_count').value) || 1,
+        reward_gold: parseInt(document.getElementById('aq-reward_gold').value) || 0,
+        reward_fragment: parseInt(document.getElementById('aq-reward_fragment').value) || 0,
+        reward_merit: parseInt(document.getElementById('aq-reward_merit').value) || 0,
+        reward_incense: parseInt(document.getElementById('aq-reward_incense').value) || 0,
+        reward_candle: parseInt(document.getElementById('aq-reward_candle').value) || 0
+    };
+    if (!data.id || !data.name || !data.target_type) {
+        alert('请填写必填字段');
+        return;
+    }
+    const result = await apiFetch('/api/admin/quests', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    });
+    if (result && result.code === 200) {
+        closeModal();
+        loadQuests();
+    } else {
+        alert('创建失败: ' + (result?.message || '未知错误'));
+    }
+}
         '<td>' + (q.reward_gold||0) + '\u91d1 / ' + (q.reward_exp||0) + '\u7ecf\u9a8c</td>' +
         '<td>Lv.' + (q.unlock_level || 1) + '+</td>' +
         '<td><span class="badge badge-success">\u542f\u7528</span></td>' +
