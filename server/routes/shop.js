@@ -50,7 +50,7 @@ router.post('/buy', authMiddleware, async (req, res, next) => {
     }
     
     // 检查金钱
-    if (player.gold < totalPrice) {
+    if (Number(player.gold) < totalPrice) {
       return fail(res, '香火钱不足');
     }
     
@@ -99,7 +99,7 @@ router.post('/buy', authMiddleware, async (req, res, next) => {
       product_name: product.name,
       count,
       total_price: totalPrice,
-      new_gold: player.gold - totalPrice
+      new_gold: Number(player.gold) - totalPrice
     }, '购买成功');
     
   } catch (err) { next(err); }

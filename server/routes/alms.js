@@ -298,7 +298,7 @@ router.post('/go', authMiddleware, async (req, res, next) => {
       netGain,
       blessingBoost: usedBlessing ? (netGain - originalNetGain) : 0,
       remainAlms: p.daily_alms - 1,
-      newGold: p.gold + netGain,
+      newGold: Number(p.gold) + netGain,
       newMana: p.mana - manaCost,
       newMerit: (p.merit || 0) + (cfg.activeAlmsMerit || 5),
       newReputation: (p.reputation || 0) + repGain,
@@ -518,7 +518,7 @@ router.post('/passive', authMiddleware, async (req, res, next) => {
 
     return success(res, {
       almsAmount,
-      newGold: almser.gold + almsAmount,
+      newGold: Number(almser.gold) + almsAmount,
       newTempleStorage: Math.max(0, target.temple_storage - almsAmount),
       newFaith: target.faith + 1,
       newReputation: target.reputation + 2,

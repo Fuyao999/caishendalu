@@ -48,9 +48,12 @@ router.get('/info', authMiddleware, async (req, res, next) => {
 
     // 计算离线法力恢复（根据后台配置的恢复速度，上限100）
     if (player.last_update_time) {
-      const elapsed = Date.now() - new Date(player.last_update_time).getTime();
+      const lastUpdate = parseInt(player.last_update_time);
+      const now = Date.now();
+      const elapsed = now - lastUpdate;
       const manaRecovered = Math.floor(elapsed * manaRegenPerHour / 3600000);
       player.mana = Math.min(100, Math.max(0, (player.mana || 0)) + manaRecovered);
+
       // 同时更新数据库
       await pool.query('UPDATE player_data SET mana=? WHERE user_id=?', [player.mana, req.user.userId]);
     }
@@ -132,8 +135,8 @@ router.post('/sync-data', authMiddleware, async (req, res, next) => {
       'opened_heaven=?'
     ];
     let updateValues = [
-      gold||0, level||1, yuanbao||0, merit||0, manaToSave, fragments||0, banners||0,
-      gold_paper||0, fruits||0, incense_sticks||0, candles||0,
+      Number(gold)||0, level||1, yuanbao||0, merit||0, manaToSave, fragments||0, banners||0,
+      Number(gold_paper)||0, Number(fruits)||0, Number(incense_sticks)||0, Number(candles)||0,
       // 不包含 alms_count, great_count, worship_count 等
       daily_alms||20, daily_sign||0, sign_streak||0, total_sign||0, alms_miss_streak||0, alms_today||0,
       tutorial_completed||0, today_login||0, announcement_shown||0, lastLoginDate||null, (shengxiao !== null && shengxiao !== undefined ? shengxiao : null),
@@ -200,8 +203,20 @@ router.post('/update-nickname', authMiddleware, async (req, res, next) => {
 router.post('/update-incense', authMiddleware, async (req, res, next) => {
   try {
     const { incense_type, incense_end_at } = req.body;
+    console.log('[续香] 收到请求:', { incense_type, incense_end_at });
+    const validTypes = ['incense', 'candle', 'paper', 'fruit'];
+    const typeToSave = incense_type && validTypes.includes(incense_type) ? incense_type : null;
+    if (!typeToSave) {
+      console.log('[续香] 无效类型:', incense_type);
+      return fail(res, '无效的香火类型');
+    }
+    const endAtToSave = incense_end_at ? Math.floor(Number(incense_end_at)) : null;
+    if (!endAtToSave || isNaN(endAtToSave)) {
+      console.log('[续香] 无效时间:', incense_end_at);
+      return fail(res, '无效的香火结束时间');
+    }
     await pool.query('UPDATE player_data SET incense_type = ?, incense_end_at = ? WHERE user_id = ?',
-      [incense_type || null, incense_end_at || null, req.user.userId]);
+      [typeToSave, endAtToSave, req.user.userId]);
     return success(res, null, '香火状态已同步');
   } catch (err) { next(err); }
 });
@@ -272,9 +287,10 @@ router.post('/collect-temple', authMiddleware, async (req, res, next) => {
     const [rows] = await pool.query('SELECT temple_storage, gold FROM player_data WHERE user_id=?', [req.user.userId]);
     if (rows.length === 0) return fail(res, '玩家数据不存在');
     
-    const templeStorage = rows[0].temple_storage || 0;
+    const templeStorage = Number(rows[0].temple_storage) || 0;
+    const currentGold = Number(rows[0].gold) || 0;
     if (templeStorage <= 0) {
-      return success(res, { collected: 0, money: rows[0].gold }, '庙宇存储为0');
+      return success(res, { collected: 0, money: currentGold }, '庙宇存储为0');
     }
     
     // 把庙宇存储加到玩家金钱
@@ -283,7 +299,7 @@ router.post('/collect-temple', authMiddleware, async (req, res, next) => {
       [templeStorage, req.user.userId]
     );
     
-    return success(res, { collected: templeStorage, money: rows[0].gold + templeStorage }, '收取成功');
+    return success(res, { collected: templeStorage, money: currentGold + templeStorage }, '收取成功');
   } catch(err) { next(err); }
 });
 

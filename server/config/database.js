@@ -19,11 +19,15 @@ const pool = mysql.createPool({
   // 自动重连
   maxIdle: 10,
   idleTimeout: 60000,
+  // 确保返回正确编码的字符串
+  stringifyObjects: false,
+  supportBigNumbers: true,
+  bigNumberStrings: true,
 });
 
 // 确保连接使用正确的字符集
 pool.on('connection', (connection) => {
-  connection.query('SET NAMES utf8mb4', (err) => {
+  connection.query('SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci', (err) => {
     if (err) console.error('Set names error:', err);
   });
 });

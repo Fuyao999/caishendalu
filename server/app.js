@@ -33,6 +33,7 @@ const rechargeRoutes  = require('./routes/recharge');
 const eventRoutes     = require('./routes/events');
 const adminAuthRoutes = require('./routes/adminAuth');
 const adminRolesRoutes = require('./routes/adminRoles');
+const adminActivityRoutes = require('./routes/adminActivity');
 const adminRoutes     = require('./routes/admin');
 const announcementRoutes = require('./routes/announcements');
 const deityRoutes     = require('./routes/deities');
@@ -49,6 +50,7 @@ const mailRoutes       = require('./routes/mail');
 const titleRoutes      = require('./routes/title');
 const decorRoutes      = require('./routes/decor');
 const cloudTourRoutes   = require('./routes/cloudTour');
+const activityRoutes   = require('./routes/activity');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -110,6 +112,7 @@ app.use('/api/events',    eventRoutes);
 app.use('/api/admin',     adminRoutes);
 app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin/roles', adminRolesRoutes);
+app.use('/api/admin/activity', adminActivityRoutes);
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/deities',   deityRoutes);
 app.use('/api/stories',   storyRoutes);
@@ -125,6 +128,7 @@ app.use('/api/mail',       mailRoutes);
 app.use('/api/title',      titleRoutes);
 app.use('/api/decor',      decorRoutes);
 app.use('/api/cloud-tour', cloudTourRoutes);
+app.use('/api/activity', activityRoutes);
 
 // ==================== 健康检查 ====================
 app.get('/api/health', (req, res) => {
@@ -194,7 +198,7 @@ async function start() {
     const { pool } = require('./config/database');
     const STORAGE_LIMITS = {1:5000, 2:10000, 3:18000, 4:30000, 5:50000, 6:100000};
     // 每分钟产出（TEMPLE_DATA每天产出/1440分钟）
-    const OUTPUT_PER_MIN = {1:1, 2:3, 3:4, 4:5, 5:6, 6:13};
+    const OUTPUT_PER_SEC = {1:0.028, 2:0.050, 3:0.069, 4:0.093, 5:0.116, 6:0.217};
     
     function updateRobotStorage() {
       pool.query('SELECT player_id, level, temple_storage, updated_at FROM robots').then(([rows]) => {
@@ -222,9 +226,10 @@ async function start() {
         [now]
       ).then(([rows]) => {
         rows.forEach(p => {
-          const outputPerMinute = OUTPUT_PER_MIN[p.level] || 1;
+          const outputPerSec = OUTPUT_PER_SEC[p.level] || 0.028;
           const storageLimit = STORAGE_LIMITS[p.level] || 5000;
-          const newStorage = Math.min((p.temple_storage || 0) + Math.floor(outputPerMinute), storageLimit);
+          const currentStorage = parseFloat(p.temple_storage) || 0;
+          const newStorage = Math.min(currentStorage + outputPerSec, storageLimit);
           if (newStorage !== p.temple_storage) {
             pool.query('UPDATE player_data SET temple_storage = ? WHERE user_id = ?', [newStorage, p.user_id]);
           }
@@ -232,11 +237,11 @@ async function start() {
       }).catch(e => { console.error('更新玩家庙宇产出失败:', e); });
     }
     
-    // 每分钟执行一次
+    // 每秒执行一次（产出按秒计算）
     updateRobotStorage();
     updatePlayerTempleStorage();
     setInterval(updateRobotStorage, 60000);
-    setInterval(updatePlayerTempleStorage, 60000);
+    setInterval(updatePlayerTempleStorage, 1000);
     console.log('🤖 机器人香火钱自动产出任务已启动（每分钟更新）');
     console.log('🏛️ 玩家庙宇存储产出任务已启动（每分钟更新）');
   });

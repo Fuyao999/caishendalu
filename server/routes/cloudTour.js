@@ -347,7 +347,7 @@ router.post('/alms', authMiddleware, async (req, res, next) => {
 
     if (isRobotFlag) {
       // 机器人：只加钱，不真实扣对方数据
-      newGold = almser.gold + almsAmount;
+      newGold = Number(almser.gold) + almsAmount;
       newTempleStorage = Math.max(0, target.temple_storage - almsAmount);
       newFragments = (almser.fragments || 0) + 1;
       await pool.query(
@@ -367,7 +367,7 @@ router.post('/alms', authMiddleware, async (req, res, next) => {
           `UPDATE player_data SET gold = gold + ?, mana = mana - ?, fragments = fragments + 1, reputation = reputation + 1, merit = merit + 5, alms_count = alms_count + 1${isGreat ? ', great_count = great_count + 1' : ''} WHERE user_id = ?`,
           [actualAlms, manaCost, userId]
         );
-        newGold = almser.gold + actualAlms;
+        newGold = Number(almser.gold) + actualAlms;
         newTempleStorage = 0;
       } else {
         await pool.query(
@@ -379,7 +379,7 @@ router.post('/alms', authMiddleware, async (req, res, next) => {
           `UPDATE player_data SET gold = gold + ?, mana = mana - ?, fragments = fragments + 1, reputation = reputation + 1, merit = merit + 5, alms_count = alms_count + 1${isGreat ? ', great_count = great_count + 1' : ''} WHERE user_id = ?`,
           [almsAmount, manaCost, userId]
         );
-        newGold = almser.gold + almsAmount;
+        newGold = Number(almser.gold) + almsAmount;
         newTempleStorage = target.temple_storage - almsAmount;
       }
 
