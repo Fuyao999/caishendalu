@@ -135,7 +135,11 @@ router.post('/login', async (req, res, next) => {
       [user.id]
     );
     
-    const token = generateToken(user.id, user.username);
+    const token = generateToken(user.id, user.username, playerRows[0]?.player_id);
+        console.log('=== LOGIN DEBUG ===');
+        console.log('user.id:', user.id);
+        console.log('playerRows:', playerRows);
+        console.log('player_id to embed:', playerRows[0]?.player_id);
     
     // 记日志
     await pool.query(

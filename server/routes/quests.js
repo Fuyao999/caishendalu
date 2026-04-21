@@ -27,14 +27,14 @@ router.get('/list', authMiddleware, async (req, res, next) => {
         
         // 获取玩家称号
         const [playerTitles] = await pool.query(
-            'SELECT title_id, equipped FROM player_titles WHERE user_id = ? AND unlocked = 1',
+            'SELECT title_id, unlocked_at FROM player_titles WHERE user_id = ? AND unlocked_at IS NOT NULL',
             [playerId]
         );
         
-        const equippedTitle = playerTitles.find(t => t.equipped === 1)?.title_id || null;
+        const equippedTitle = null; // 暂时不支持多装备
         
         // 获取已解锁的称号数量
-        const unlockedTitles = playerTitles.filter(t => t.unlocked === 1).map(t => t.title_id);
+        const unlockedTitles = playerTitles.filter(t => t.unlocked_at !== null).map(t => t.title_id);
         
         // 获取玩家数据（用于计算进度）
         const [players] = await pool.query(
@@ -256,6 +256,11 @@ router.get('/by-title/:titleId', authMiddleware, async (req, res, next) => {
 router.post('/claim', authMiddleware, async (req, res, next) => {
     try {
         const playerId = req.playerId;
+        console.log('=== CLAIM DEBUG ===');
+        console.log('req.playerId:', req.playerId);
+        console.log('req.userId:', req.userId);
+        console.log('req.body:', req.body);
+        
         const { quest_id } = req.body;
         
         if (!quest_id) {

@@ -23,7 +23,7 @@ function authMiddleware(req, res, next) {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     req.userId = decoded.userId;  // 兼容路由中直接用 req.userId
-    req.playerId = decoded.userId;  // 兼容部分路由使用的 playerId
+    req.playerId = decoded.playerId || decoded.userId;  // 优先用playerId（登录时有），否则用userId（注册时有）
     next();
   } catch (err) {
     return res.status(401).json({ 
@@ -50,9 +50,11 @@ function optionalAuth(req, res, next) {
 }
 
 // 生成Token
-function generateToken(userId, username) {
+function generateToken(userId, username, playerId) {
+  const payload = { userId, username };
+  if (playerId) payload.playerId = playerId;
   return jwt.sign(
-    { userId, username },
+    payload,
     JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
