@@ -136,7 +136,7 @@ router.get('/titles', adminMiddleware, async (req, res, next) => {
         
         // 获取每个称号的解锁人数
         const [stats] = await pool.query(
-            'SELECT title_id, COUNT(*) as count FROM player_titles WHERE unlocked = 1 GROUP BY title_id'
+            'SELECT title_id, COUNT(*) as count FROM player_titles WHERE unlocked_at IS NOT NULL GROUP BY title_id'
         );
         
         const statsMap = {};
@@ -216,6 +216,91 @@ router.post('/quests/:playerId/reset', adminMiddleware, async (req, res, next) =
         }
     } catch(e) {
         next(e);
+    }
+});
+
+// GET /api/admin/users - 获取用户列表
+router.get('/users', adminMiddleware, async (req, res, next) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const offset = (page - 1) * limit;
+        
+        const [users] = await pool.query(
+            `SELECT u.id, u.username, u.status, u.created_at,
+                    p.player_id, p.nickname, p.level, p.realm_name, p.gold, p.yuanbao
+             FROM users u
+             LEFT JOIN player_data p ON u.id = p.user_id
+             ORDER BY u.id DESC
+             LIMIT ? OFFSET ?`,
+            [limit, offset]
+        );
+        
+        const [[{ total }]] = await pool.query('SELECT COUNT(*) as total FROM users');
+        
+        res.json({
+            code: 200,
+            data: {
+                users,
+                total,
+                page,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+    } catch (e) {
+        console.error('Get users error:', e);
+        res.json({ code: 500, message: '获取用户列表失败' });
+    }
+});
+
+// GET /api/admin/dashboard - 获取仪表盘数据
+router.get('/dashboard', adminMiddleware, async (req, res, next) => {
+    try {
+        const [[{ totalUsers }]] = await pool.query('SELECT COUNT(*) as totalUsers FROM users');
+        const [[{ activeToday }]] = await pool.query('SELECT COUNT(*) as activeToday FROM users WHERE DATE(last_login_at) = CURDATE()');
+        const [[{ totalGold }]] = await pool.query('SELECT SUM(gold) as totalGold FROM player_data');
+        const [[{ totalPlayers }]] = await pool.query('SELECT COUNT(*) as totalPlayers FROM player_data');
+        
+        res.json({
+            code: 200,
+            data: {
+                users: { total: totalUsers, activeToday: activeToday || 0 },
+                revenue: { todayCNY: 0 },
+                gold: totalGold || 0,
+                players: totalPlayers || 0
+            }
+        });
+    } catch (e) {
+        console.error('Dashboard error:', e);
+        res.json({ code: 500, message: '获取仪表盘数据失败' });
+    }
+});
+
+// GET /api/admin/alms-config - 获取化缘配置
+router.get('/alms-config', adminMiddleware, async (req, res, next) => {
+    try {
+        const [rows] = await pool.query('SELECT config_value FROM game_config WHERE config_name = ?', ['alms_config']);
+        if (rows.length === 0) {
+            return res.json({ code: 200, data: {} });
+        }
+        res.json({ code: 200, data: rows[0].config_value });
+    } catch (e) {
+        console.error('Get alms-config error:', e);
+        res.json({ code: 500, message: '获取化缘配置失败' });
+    }
+});
+
+// POST /api/admin/alms-config - 保存化缘配置
+router.post('/alms-config', adminMiddleware, async (req, res, next) => {
+    try {
+        await pool.query(
+            'INSERT INTO game_config (config_name, config_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE config_value = VALUES(config_value)',
+            ['alms_config', JSON.stringify(req.body)]
+        );
+        res.json({ code: 200, message: '保存成功' });
+    } catch (e) {
+        console.error('Save alms-config error:', e);
+        res.json({ code: 500, message: '保存化缘配置失败' });
     }
 });
 

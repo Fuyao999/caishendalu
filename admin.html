@@ -1703,6 +1703,13 @@
             document.getElementById('modalFooter').innerHTML = footerHTML || '<button class="btn" onclick="closeGlobalModal()" style="background:#34495e">关闭</button>';
             document.getElementById('globalModal').style.display = 'flex';
         }
+        // showModal 别名
+        function showModal(title, bodyHTML) {
+            showGlobalModal(title, bodyHTML);
+        }
+        function closeModal() {
+            closeGlobalModal();
+        }
         function closeGlobalModal() {
             document.getElementById('globalModal').style.display = 'none';
         }
@@ -2531,13 +2538,14 @@
 // --- 称号管理 ---
 async function loadTitles() {
     const data = await apiFetch('/api/admin/titles');
-    const tbody = document.querySelector('#titles table tbody');
-    if (!tbody) return;
+    const tbody = document.querySelector('#titles-table-body');
+    if (!tbody) { console.log('tbody not found'); return; }
     if (!data || data.code !== 200) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;padding:20px">加载失败</td></tr>';
         return;
     }
     const items = data.data || [];
+    window._titlesCache = items;  // 缓存数据供编辑使用
     if (!items.length) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;padding:20px">暂无称号数据</td></tr>';
         return;
@@ -2555,9 +2563,11 @@ async function loadTitles() {
 }
 
 function editTitle(id) {
+    console.log('editTitle called with id:', id);
     const titles = window._titlesCache || [];
+    console.log('titles cache:', titles.length);
     const t = titles.find(t => t.id === id);
-    if (!t) return;
+    if (!t) { console.log('title not found'); return; }
     showModal('编辑称号: ' + t.name, `
         <div style="display:grid;gap:10px;text-align:left">
             <div><label style="color:#ccc">ID</label><input type="text" id="et-id" value="${t.id}" readonly style="width:100%;padding:8px;background:#333;border:1px solid #555;color:#888;border-radius:4px"></div>
@@ -3920,7 +3930,7 @@ async function loadDomains() {
 // --- 任务成就管理 ---
 async function loadQuests() {
     const data = await apiFetch('/api/admin/quests?limit=100');
-    const tbody = document.querySelector('#quests table tbody');
+    const tbody = document.querySelector('#quests-table-body');
     if (!tbody) return;
     if (!data || data.code !== 200) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;padding:20px">加载失败</td></tr>';
@@ -4046,11 +4056,6 @@ async function saveNewQuest() {
     } else {
         alert('创建失败: ' + (result?.message || '未知错误'));
     }
-}
-        '<td>' + (q.reward_gold||0) + '\u91d1 / ' + (q.reward_exp||0) + '\u7ecf\u9a8c</td>' +
-        '<td>Lv.' + (q.unlock_level || 1) + '+</td>' +
-        '<td><span class="badge badge-success">\u542f\u7528</span></td>' +
-        '</tr>').join('');
 }
 
 // --- 装修管理 ---
@@ -4589,6 +4594,6 @@ async function updateSetting(input) {
         }
 
         </script>
-<script src="admin-functions.js"></script>
+<!-- <script src="admin-functions.js"></script> -->
 </body>
 </html>

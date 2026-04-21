@@ -23,6 +23,7 @@ function authMiddleware(req, res, next) {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     req.userId = decoded.userId;  // 兼容路由中直接用 req.userId
+    req.playerId = decoded.userId;  // 兼容部分路由使用的 playerId
     next();
   } catch (err) {
     return res.status(401).json({ 
@@ -58,7 +59,7 @@ function generateToken(userId, username) {
 }
 
 // 验证管理员Token
-function adminMiddleware(req, res, next) {
+async function adminMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -76,7 +77,7 @@ function adminMiddleware(req, res, next) {
     req.userId = decoded.userId;
     
     // 验证是否是管理员
-    const [admins] = pool.query('SELECT id FROM admin_users WHERE username = ?', [decoded.username]);
+    const [admins] = await pool.query('SELECT id FROM admin_users WHERE username = ?', [decoded.username]);
     if (admins.length === 0) {
       return res.status(403).json({ 
         code: 403, 

@@ -27,7 +27,7 @@ router.get('/list', authMiddleware, async (req, res, next) => {
         
         // 获取玩家称号
         const [playerTitles] = await pool.query(
-            'SELECT title_id, equipped FROM player_titles WHERE player_id = ? AND unlocked = 1',
+            'SELECT title_id, equipped FROM player_titles WHERE user_id = ? AND unlocked = 1',
             [playerId]
         );
         
@@ -147,6 +147,106 @@ router.get('/daily', authMiddleware, async (req, res, next) => {
         });
         
         res.json({ code: 200, data: result });
+    } catch(e) {
+        next(e);
+    }
+});
+
+// 获取某个称号的任务步骤
+router.get('/by-title/:titleId', authMiddleware, async (req, res, next) => {
+    try {
+        const playerId = req.playerId;
+        const { titleId } = req.params;
+        
+        // 获取该称号的5个任务
+        const [quests] = await pool.query(
+            "SELECT * FROM quests WHERE title_id = ? AND type = 'achievement' AND is_active = 1 ORDER BY sort_order",
+            [titleId]
+        );
+        
+        // 获取玩家进度
+        const [progress] = await pool.query(
+            'SELECT quest_id, progress, claimed FROM player_quest_progress WHERE player_id = ?',
+            [playerId]
+        );
+        
+        const progressMap = {};
+        progress.forEach(p => {
+            progressMap[p.quest_id] = p;
+        });
+        
+        // 获取玩家当前属性
+        const [players] = await pool.query(
+            'SELECT * FROM player_data WHERE player_id = ?',
+            [playerId]
+        );
+        
+        const player = players[0] || {};
+        
+        // 获取已解锁的称号数量
+        const [titles] = await pool.query(
+            'SELECT COUNT(*) as cnt FROM player_titles WHERE user_id = ? AND unlocked_at IS NOT NULL',
+            [playerId]
+        );
+        const unlockedTitleCount = titles[0]?.cnt || 0;
+        
+        // 获取已解锁的财神数量（从player_data的deity_order字段估算）
+        let unlockedGodCount = 0;
+        if (player.deity_order) {
+            try {
+                const deityOrder = JSON.parse(player.deity_order);
+                unlockedGodCount = Array.isArray(deityOrder) ? deityOrder.length : 0;
+            } catch(e) {
+                unlockedGodCount = 0;
+            }
+        }
+        
+        const result = quests.map((quest, index) => {
+            const p = progressMap[quest.id] || { progress: 0, claimed: 0 };
+            
+            // 计算当前进度
+            let currentProgress = 0;
+            if (quest.target_type === 'title_count') {
+                currentProgress = unlockedTitleCount;
+            } else if (quest.target_type === 'god_count') {
+                currentProgress = unlockedGodCount;
+            } else if (quest.target_type === 'level') {
+                currentProgress = player.level || 1;
+            } else if (quest.target_type === 'gold') {
+                currentProgress = player.gold || 0;
+            } else if (quest.target_type === 'merit') {
+                currentProgress = player.merit || 0;
+            } else if (quest.target_type === 'great_count') {
+                currentProgress = player.great_count || 0;
+            } else if (quest.target_type === 'login_days') {
+                currentProgress = player.total_sign || 0;
+            } else if (quest.target_type === 'worship_count') {
+                currentProgress = player.worship_count || 0;
+            } else if (quest.target_type === 'visit_count') {
+                currentProgress = player.visit_count || 0;
+            } else if (quest.target_type === 'total_spent') {
+                currentProgress = player.total_spent || 0;
+            } else if (quest.target_type === 'invite_count') {
+                currentProgress = player.invite_count || 0;
+            } else if (quest.target_type === 'total_recharge') {
+                currentProgress = player.total_recharge || 0;
+            }
+            
+            const completed = currentProgress >= quest.target_count;
+            
+            return {
+                id: quest.id,
+                step: index + 1,
+                name: quest.name,
+                description: quest.description,
+                target: quest.target_count,
+                progress: Math.min(currentProgress, quest.target_count),
+                completed: completed,
+                claimed: p.claimed === 1
+            };
+        });
+        
+        res.json({ code: 200, data: { quests: result } });
     } catch(e) {
         next(e);
     }
@@ -302,7 +402,7 @@ router.get('/titles', authMiddleware, async (req, res, next) => {
         );
         
         const [playerTitles] = await pool.query(
-            'SELECT * FROM player_titles WHERE player_id = ?',
+            'SELECT * FROM player_titles WHERE user_id = ?',
             [playerId]
         );
         
@@ -311,14 +411,14 @@ router.get('/titles', authMiddleware, async (req, res, next) => {
             playerTitleMap[pt.title_id] = pt;
         });
         
-        const equippedTitle = playerTitles.find(t => t.equipped === 1)?.title_id || null;
+        const equippedTitle = null; // 暂时不支持多装备
         
         const result = titles.map(title => {
-            const pt = playerTitleMap[title.id] || { unlocked: 0, equipped: 0 };
+            const pt = playerTitleMap[title.id];
             return {
                 ...title,
-                unlocked: pt.unlocked === 1,
-                equipped: pt.equipped === 1
+                unlocked: pt ? true : false,  // 有记录就当解锁
+                equipped: false
             };
         });
         
@@ -346,25 +446,13 @@ router.post('/titles/equip', authMiddleware, async (req, res, next) => {
         
         // 检查称号是否已解锁
         const [playerTitles] = await pool.query(
-            'SELECT * FROM player_titles WHERE player_id = ? AND title_id = ?',
+            'SELECT * FROM player_titles WHERE user_id = ? AND title_id = ?',
             [playerId, title_id]
         );
         
-        if (!playerTitles.length || playerTitles[0].unlocked !== 1) {
+        if (!playerTitles.length || !playerTitles[0].unlocked_at) {
             return res.json({ code: 400, message: '称号未解锁' });
         }
-        
-        // 先卸下所有称号
-        await pool.query(
-            'UPDATE player_titles SET equipped = 0 WHERE player_id = ?',
-            [playerId]
-        );
-        
-        // 装备新称号
-        await pool.query(
-            'UPDATE player_titles SET equipped = 1 WHERE player_id = ? AND title_id = ?',
-            [playerId, title_id]
-        );
         
         res.json({ code: 200, message: '装备成功' });
     } catch(e) {
@@ -439,18 +527,18 @@ async function checkAndUnlockTitle(playerId, titleId) {
     if (allCompleted) {
         // 解锁称号
         const [existing] = await pool.query(
-            'SELECT * FROM player_titles WHERE player_id = ? AND title_id = ?',
+            'SELECT * FROM player_titles WHERE user_id = ? AND title_id = ?',
             [playerId, titleId]
         );
         
         if (existing.length) {
             await pool.query(
-                'UPDATE player_titles SET unlocked = 1, unlocked_at = NOW() WHERE player_id = ? AND title_id = ?',
+                'UPDATE player_titles SET unlocked_at = NOW() WHERE user_id = ? AND title_id = ?',
                 [playerId, titleId]
             );
         } else {
             await pool.query(
-                'INSERT INTO player_titles (player_id, title_id, unlocked, unlocked_at) VALUES (?, ?, 1, NOW())',
+                'INSERT INTO player_titles (user_id, title_id, unlocked_at) VALUES (?, ?, NOW())',
                 [playerId, titleId]
             );
         }
