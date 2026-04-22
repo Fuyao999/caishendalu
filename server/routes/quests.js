@@ -255,57 +255,42 @@ router.get('/by-title/:titleId', authMiddleware, async (req, res, next) => {
 // 领取任务奖励
 router.post('/claim', authMiddleware, async (req, res, next) => {
     try {
-        const playerId = req.playerId;
+        const userId = req.user.userId;
         console.log('=== CLAIM DEBUG ===');
-        console.log('req.playerId:', req.playerId);
         console.log('req.userId:', req.userId);
         console.log('req.body:', req.body);
-        
+
         const { quest_id } = req.body;
-        
+
         if (!quest_id) {
             return res.json({ code: 400, message: '缺少任务ID' });
         }
-        
+
         // 获取任务
         const [quests] = await pool.query(
             'SELECT * FROM quests WHERE id = ? AND is_active = 1',
             [quest_id]
         );
-        
+
         if (!quests.length) {
             return res.json({ code: 404, message: '任务不存在' });
         }
-        
+
         const quest = quests[0];
-        
-        // 获取玩家进度
+
+        // 获取玩家进度（从quest_progress表）
         const [progress] = await pool.query(
-            'SELECT * FROM player_quest_progress WHERE player_id = ? AND quest_id = ?',
-            [playerId, quest_id]
+            'SELECT * FROM quest_progress WHERE user_id = ? AND quest_id = ?',
+            [userId, quest_id]
         );
-        
-        // 获取玩家数据
-        const [players] = await pool.query(
-            'SELECT * FROM player_data WHERE player_id = ?',
-            [playerId]
-        );
-        
-        if (!players.length) {
-            return res.json({ code: 404, message: '玩家不存在' });
-        }
-        
-        const player = players[0];
-        
-        // 计算当前进度
-        const currentProgress = calculateProgress(quest.target_type, quest.target_count, player, 0);
-        
-        if (currentProgress < quest.target_count) {
+
+        // 检查是否完成
+        if (!progress.length || progress[0].progress < quest.target_count) {
             return res.json({ code: 400, message: '任务未完成' });
         }
-        
+
         // 检查是否已领取
-        if (progress.length && progress[0].claimed === 1) {
+        if (progress[0].claimed === 1) {
             return res.json({ code: 400, message: '奖励已领取' });
         }
         
@@ -347,35 +332,28 @@ router.post('/claim', authMiddleware, async (req, res, next) => {
         }
         
         if (updates.length > 0) {
-            values.push(playerId);
+            values.push(userId);
             await pool.query(
-                'UPDATE player_data SET ' + updates.join(', ') + ' WHERE player_id = ?',
+                'UPDATE player_data SET ' + updates.join(', ') + ' WHERE user_id = ?',
                 values
             );
         }
-        
-        // 更新或插入进度
-        if (progress.length) {
-            await pool.query(
-                'UPDATE player_quest_progress SET claimed = 1, claimed_at = NOW(), progress = ? WHERE player_id = ? AND quest_id = ?',
-                [quest.target_count, playerId, quest_id]
-            );
-        } else {
-            await pool.query(
-                'INSERT INTO player_quest_progress (player_id, quest_id, progress, claimed, claimed_at) VALUES (?, ?, ?, 1, NOW())',
-                [playerId, quest_id, quest.target_count]
-            );
-        }
-        
+
+        // 更新quest_progress的claimed状态
+        await pool.query(
+            'UPDATE quest_progress SET claimed = 1 WHERE user_id = ? AND quest_id = ?',
+            [userId, quest_id]
+        );
+
         // 如果是成就任务，检查是否解锁称号
         if (quest.type === 'achievement' && quest.title_id) {
-            await checkAndUnlockTitle(playerId, quest.title_id);
+            await checkAndUnlockTitle(userId, quest.title_id);
         }
-        
+
         // 获取更新后的玩家数据
         const [updatedPlayer] = await pool.query(
-            'SELECT * FROM player_data WHERE player_id = ?',
-            [playerId]
+            'SELECT * FROM player_data WHERE user_id = ?',
+            [userId]
         );
         
         res.json({
