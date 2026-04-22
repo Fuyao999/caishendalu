@@ -152,6 +152,43 @@ router.post('/add', authMiddleware, async (req, res) => {
                 level: friendLevel
             }
         });
+
+        // 更新邀请好友任务进度
+        try {
+          const [inviteTasks] = await db.pool.query(
+            "SELECT * FROM quests WHERE target_type = 'invite_today' AND type = 'daily' AND is_active = 1"
+          );
+          for (const task of inviteTasks) {
+            const [progressRows] = await db.pool.query(
+              'SELECT * FROM quest_progress WHERE user_id = ? AND quest_id = ?',
+              [userId, task.id]
+            );
+            let currentProgress = progressRows.length > 0 ? (progressRows[0].progress || 0) : 0;
+            currentProgress += 1;
+            if (progressRows.length > 0) {
+              await db.pool.query(
+                'UPDATE quest_progress SET progress = ? WHERE user_id = ? AND quest_id = ?',
+                [currentProgress, userId, task.id]
+              );
+            } else {
+              await db.pool.query(
+                'INSERT INTO quest_progress (user_id, quest_id, progress, claimed) VALUES (?, ?, ?, 0)',
+                [userId, task.id, currentProgress]
+              );
+            }
+            // 更新活跃值
+            if (currentProgress >= task.target_count) {
+              if (progressRows.length === 0 || (progressRows[0].progress || 0) < task.target_count) {
+                await db.pool.query(
+                  'UPDATE player_activity SET daily_activity = daily_activity + ?, weekly_activity = weekly_activity + ? WHERE user_id = ?',
+                  [task.activity_point || 0, task.activity_point || 0, userId]
+                );
+              }
+            }
+          }
+        } catch (err) {
+          console.error('更新邀请好友任务失败:', err);
+        }
         
     } catch (error) {
         console.error('添加好友失败:', error);
@@ -233,6 +270,43 @@ router.post('/visit/:friendId', authMiddleware, async (req, res) => {
                 newReputation: newReputation
             }
         });
+
+        // 更新拜访好友任务进度
+        try {
+          const [visitTasks] = await db.pool.query(
+            "SELECT * FROM quests WHERE target_type = 'visit_today' AND type = 'daily' AND is_active = 1"
+          );
+          for (const task of visitTasks) {
+            const [progressRows] = await db.pool.query(
+              'SELECT * FROM quest_progress WHERE user_id = ? AND quest_id = ?',
+              [userId, task.id]
+            );
+            let currentProgress = progressRows.length > 0 ? (progressRows[0].progress || 0) : 0;
+            currentProgress += 1;
+            if (progressRows.length > 0) {
+              await db.pool.query(
+                'UPDATE quest_progress SET progress = ? WHERE user_id = ? AND quest_id = ?',
+                [currentProgress, userId, task.id]
+              );
+            } else {
+              await db.pool.query(
+                'INSERT INTO quest_progress (user_id, quest_id, progress, claimed) VALUES (?, ?, ?, 0)',
+                [userId, task.id, currentProgress]
+              );
+            }
+            // 更新活跃值
+            if (currentProgress >= task.target_count) {
+              if (progressRows.length === 0 || (progressRows[0].progress || 0) < task.target_count) {
+                await db.pool.query(
+                  'UPDATE player_activity SET daily_activity = daily_activity + ?, weekly_activity = weekly_activity + ? WHERE user_id = ?',
+                  [task.activity_point || 0, task.activity_point || 0, userId]
+                );
+              }
+            }
+          }
+        } catch (err) {
+          console.error('更新拜访好友任务失败:', err);
+        }
         
     } catch (error) {
         console.error('拜访好友失败:', error);

@@ -146,7 +146,44 @@ router.post('/login', async (req, res, next) => {
       'INSERT INTO logs (user_id, action, ip) VALUES (?, ?, ?)',
       [user.id, 'login', req.ip]
     );
-    
+
+    // 更新登录任务进度（连续登录天数）
+    try {
+      const [loginTasks] = await pool.query(
+        "SELECT * FROM quests WHERE target_type = 'login_days' AND type = 'daily' AND is_active = 1"
+      );
+      for (const task of loginTasks) {
+        const [progressRows] = await pool.query(
+          'SELECT * FROM quest_progress WHERE user_id = ? AND quest_id = ?',
+          [user.id, task.id]
+        );
+        let currentProgress = progressRows.length > 0 ? (progressRows[0].progress || 0) : 0;
+        currentProgress += 1;
+        if (progressRows.length > 0) {
+          await pool.query(
+            'UPDATE quest_progress SET progress = ? WHERE user_id = ? AND quest_id = ?',
+            [currentProgress, user.id, task.id]
+          );
+        } else {
+          await pool.query(
+            'INSERT INTO quest_progress (user_id, quest_id, progress, claimed) VALUES (?, ?, ?, 0)',
+            [user.id, task.id, currentProgress]
+          );
+        }
+        // 更新活跃值
+        if (currentProgress >= task.target_count) {
+          if (progressRows.length === 0 || (progressRows[0].progress || 0) < task.target_count) {
+            await pool.query(
+              'UPDATE player_activity SET daily_activity = daily_activity + ?, weekly_activity = weekly_activity + ? WHERE user_id = ?',
+              [task.activity_point || 0, task.activity_point || 0, user.id]
+            );
+          }
+        }
+      }
+    } catch (err) {
+      console.error('更新登录任务失败:', err);
+    }
+
     return success(res, {
       token,
       userId: user.id,
@@ -154,7 +191,7 @@ router.post('/login', async (req, res, next) => {
       username: user.username,
       player: playerRows[0] || null,
     }, '登录成功');
-    
+
   } catch (err) { next(err); }
 });
 

@@ -258,6 +258,44 @@ router.post('/sign-in', authMiddleware, async (req, res, next) => {
       `UPDATE player_data SET daily_sign=1, sign_streak=?, total_sign=total_sign+1, gold=gold+? WHERE user_id=?`,
       [streak, reward, req.user.userId]
     );
+
+    // 更新签到任务进度
+    try {
+      const [signTasks] = await pool.query(
+        "SELECT * FROM quests WHERE target_type = 'sign_days' AND type = 'daily' AND is_active = 1"
+      );
+      for (const task of signTasks) {
+        const [progressRows] = await pool.query(
+          'SELECT * FROM quest_progress WHERE user_id = ? AND quest_id = ?',
+          [req.user.userId, task.id]
+        );
+        let currentProgress = progressRows.length > 0 ? (progressRows[0].progress || 0) : 0;
+        currentProgress += 1;
+        if (progressRows.length > 0) {
+          await pool.query(
+            'UPDATE quest_progress SET progress = ? WHERE user_id = ? AND quest_id = ?',
+            [currentProgress, req.user.userId, task.id]
+          );
+        } else {
+          await pool.query(
+            'INSERT INTO quest_progress (user_id, quest_id, progress, claimed) VALUES (?, ?, ?, 0)',
+            [req.user.userId, task.id, currentProgress]
+          );
+        }
+        // 更新活跃值
+        if (currentProgress >= task.target_count) {
+          if (progressRows.length === 0 || (progressRows[0].progress || 0) < task.target_count) {
+            await pool.query(
+              'UPDATE player_activity SET daily_activity = daily_activity + ?, weekly_activity = weekly_activity + ? WHERE user_id = ?',
+              [task.activity_point || 0, task.activity_point || 0, req.user.userId]
+            );
+          }
+        }
+      }
+    } catch (err) {
+      console.error('更新签到任务失败:', err);
+    }
+
     return success(res, { streak, reward, total: rows[0].total_sign + 1 }, `签到成功！连续${streak}天，奖励${reward}香火钱`);
   } catch(err) { next(err); }
 });

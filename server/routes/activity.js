@@ -409,4 +409,47 @@ router.post('/sync', authMiddleware, async (req, res, next) => {
     } catch (err) { next(err); }
 });
 
+// POST /api/activity/share - 分享成功回调
+router.post('/share', authMiddleware, async (req, res, next) => {
+    try {
+        const userId = req.user.userId;
+        await initPlayerActivity(userId);
+        await checkAndResetActivity(userId);
+
+        // 更新分享任务进度
+        const [shareTasks] = await pool.query(
+            "SELECT * FROM quests WHERE target_type = 'share_today' AND type = 'daily' AND is_active = 1"
+        );
+        for (const task of shareTasks) {
+            const [progressRows] = await pool.query(
+                'SELECT * FROM quest_progress WHERE user_id = ? AND quest_id = ?',
+                [userId, task.id]
+            );
+            let currentProgress = progressRows.length > 0 ? (progressRows[0].progress || 0) : 0;
+            currentProgress += 1;
+            if (progressRows.length > 0) {
+                await pool.query(
+                    'UPDATE quest_progress SET progress = ? WHERE user_id = ? AND quest_id = ?',
+                    [currentProgress, userId, task.id]
+                );
+            } else {
+                await pool.query(
+                    'INSERT INTO quest_progress (user_id, quest_id, progress, claimed) VALUES (?, ?, ?, 0)',
+                    [userId, task.id, currentProgress]
+                );
+            }
+            // 更新活跃值
+            if (currentProgress >= task.target_count) {
+                if (progressRows.length === 0 || (progressRows[0].progress || 0) < task.target_count) {
+                    await pool.query(
+                        'UPDATE player_activity SET daily_activity = daily_activity + ?, weekly_activity = weekly_activity + ? WHERE user_id = ?',
+                        [task.activity_point || 0, task.activity_point || 0, userId]
+                    );
+                }
+            }
+        }
+        return success(res, { shared: true }, '分享成功');
+    } catch (err) { next(err); }
+});
+
 module.exports = router;
