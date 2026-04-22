@@ -326,71 +326,15 @@ router.post('/go', authMiddleware, async (req, res, next) => {
       W2: '大吉大利', L2: '非酋本酋'
     };
 
-    return success(res, {
-      area: areaMeta.name,
-      areaId: area,
-      mode: safeOrRisk,
-      result: resultKey,
-      resultName: resultNames[resultKey],
-      netGain,
-      blessingBoost: usedBlessing ? (netGain - originalNetGain) : 0,
-      remainAlms: p.daily_alms - 1,
-      newGold: Number(p.gold) + netGain,
-      newMana: p.mana - manaCost,
-      newMerit: (p.merit || 0) + (cfg.activeAlmsMerit || 5),
-      newReputation: (p.reputation || 0) + repGain,
-      newFragments: (p.fragments || 0) + fragGain,
-      fragGain: fragGain,
-      fragBonus: fragGain > 0,
-      missStreak: newMissStreak,
-      usedBlessing,
-      blessingBonus,
-      deityBuff: usedBlessing ? deityBuff : null,
-    }, `${areaMeta.name}化缘 —— ${resultNames[resultKey]}！`);
+    // 更新化缘任务进度
+    try {
+      const isGreat = resultKey === 'JP' || resultKey === 'W2';
 
-  // 更新化缘任务进度
-  try {
-    const isGreat = resultKey === 'JP' || resultKey === 'W2';
-
-    // 更新普通化缘任务 alms_today
-    const [almsTasks] = await pool.query(
-      "SELECT * FROM quests WHERE target_type = 'alms_today' AND type = 'daily' AND is_active = 1"
-    );
-    for (const task of almsTasks) {
-      const [progressRows] = await pool.query(
-        'SELECT * FROM quest_progress WHERE user_id = ? AND quest_id = ?',
-        [req.userId, task.id]
+      // 更新普通化缘任务 alms_today
+      const [almsTasks] = await pool.query(
+        "SELECT * FROM quests WHERE target_type = 'alms_today' AND type = 'daily' AND is_active = 1"
       );
-      let currentProgress = progressRows.length > 0 ? (progressRows[0].progress || 0) : 0;
-      currentProgress += 1;
-      if (progressRows.length > 0) {
-        await pool.query(
-          'UPDATE quest_progress SET progress = ? WHERE user_id = ? AND quest_id = ?',
-          [currentProgress, req.userId, task.id]
-        );
-      } else {
-        await pool.query(
-          'INSERT INTO quest_progress (user_id, quest_id, progress, claimed) VALUES (?, ?, ?, 0)',
-          [req.userId, task.id, currentProgress]
-        );
-      }
-      // 更新活跃值
-      if (currentProgress >= task.target_count) {
-        if (progressRows.length === 0 || (progressRows[0].progress || 0) < task.target_count) {
-          await pool.query(
-            'UPDATE player_activity SET daily_activity = daily_activity + ?, weekly_activity = weekly_activity + ? WHERE user_id = ?',
-            [task.activity_point || 0, task.activity_point || 0, req.userId]
-          );
-        }
-      }
-    }
-
-    // 更新大吉化缘任务 great_alms_today
-    if (isGreat) {
-      const [greatTasks] = await pool.query(
-        "SELECT * FROM quests WHERE target_type = 'great_alms_today' AND type = 'daily' AND is_active = 1"
-      );
-      for (const task of greatTasks) {
+      for (const task of almsTasks) {
         const [progressRows] = await pool.query(
           'SELECT * FROM quest_progress WHERE user_id = ? AND quest_id = ?',
           [req.userId, task.id]
@@ -418,10 +362,66 @@ router.post('/go', authMiddleware, async (req, res, next) => {
           }
         }
       }
+
+      // 更新大吉化缘任务 great_alms_today
+      if (isGreat) {
+        const [greatTasks] = await pool.query(
+          "SELECT * FROM quests WHERE target_type = 'great_alms_today' AND type = 'daily' AND is_active = 1"
+        );
+        for (const task of greatTasks) {
+          const [progressRows] = await pool.query(
+            'SELECT * FROM quest_progress WHERE user_id = ? AND quest_id = ?',
+            [req.userId, task.id]
+          );
+          let currentProgress = progressRows.length > 0 ? (progressRows[0].progress || 0) : 0;
+          currentProgress += 1;
+          if (progressRows.length > 0) {
+            await pool.query(
+              'UPDATE quest_progress SET progress = ? WHERE user_id = ? AND quest_id = ?',
+              [currentProgress, req.userId, task.id]
+            );
+          } else {
+            await pool.query(
+              'INSERT INTO quest_progress (user_id, quest_id, progress, claimed) VALUES (?, ?, ?, 0)',
+              [req.userId, task.id, currentProgress]
+            );
+          }
+          // 更新活跃值
+          if (currentProgress >= task.target_count) {
+            if (progressRows.length === 0 || (progressRows[0].progress || 0) < task.target_count) {
+              await pool.query(
+                'UPDATE player_activity SET daily_activity = daily_activity + ?, weekly_activity = weekly_activity + ? WHERE user_id = ?',
+                [task.activity_point || 0, task.activity_point || 0, req.userId]
+              );
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('更新化缘任务失败:', err);
     }
-  } catch (err) {
-    console.error('更新化缘任务失败:', err);
-  }
+
+    return success(res, {
+      area: areaMeta.name,
+      areaId: area,
+      mode: safeOrRisk,
+      result: resultKey,
+      resultName: resultNames[resultKey],
+      netGain,
+      blessingBoost: usedBlessing ? (netGain - originalNetGain) : 0,
+      remainAlms: p.daily_alms - 1,
+      newGold: Number(p.gold) + netGain,
+      newMana: p.mana - manaCost,
+      newMerit: (p.merit || 0) + (cfg.activeAlmsMerit || 5),
+      newReputation: (p.reputation || 0) + repGain,
+      newFragments: (p.fragments || 0) + fragGain,
+      fragGain: fragGain,
+      fragBonus: fragGain > 0,
+      missStreak: newMissStreak,
+      usedBlessing,
+      blessingBonus,
+      deityBuff: usedBlessing ? deityBuff : null,
+    }, `${areaMeta.name}化缘 —— ${resultNames[resultKey]}！`);
 
   } catch (err) { next(err); }
 });
