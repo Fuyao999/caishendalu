@@ -153,15 +153,7 @@ router.post('/worship', authMiddleware, async (req, res, next) => {
             [req.userId, task.id, currentProgress]
           );
         }
-        // 更新活跃值
-        if (currentProgress >= task.target_count) {
-          if (progressRows.length === 0 || (progressRows[0].progress || 0) < task.target_count) {
-            await pool.query(
-              'UPDATE player_activity SET daily_activity = daily_activity + ?, weekly_activity = weekly_activity + ? WHERE user_id = ?',
-              [task.activity_point || 0, task.activity_point || 0, req.userId]
-            );
-          }
-        }
+        // 注意：活跃值在 quests.js 领取奖励时统一添加，不再在这里添加
       }
     } catch (err) {
       console.error('更新供奉任务失败:', err);
@@ -352,15 +344,7 @@ router.post('/go', authMiddleware, async (req, res, next) => {
             [req.userId, task.id, currentProgress]
           );
         }
-        // 更新活跃值
-        if (currentProgress >= task.target_count) {
-          if (progressRows.length === 0 || (progressRows[0].progress || 0) < task.target_count) {
-            await pool.query(
-              'UPDATE player_activity SET daily_activity = daily_activity + ?, weekly_activity = weekly_activity + ? WHERE user_id = ?',
-              [task.activity_point || 0, task.activity_point || 0, req.userId]
-            );
-          }
-        }
+        // 注意：活跃值在 quests.js 领取奖励时统一添加，不再在这里添加
       }
 
       // 更新大吉化缘任务 great_alms_today
@@ -386,15 +370,7 @@ router.post('/go', authMiddleware, async (req, res, next) => {
               [req.userId, task.id, currentProgress]
             );
           }
-          // 更新活跃值
-          if (currentProgress >= task.target_count) {
-            if (progressRows.length === 0 || (progressRows[0].progress || 0) < task.target_count) {
-              await pool.query(
-                'UPDATE player_activity SET daily_activity = daily_activity + ?, weekly_activity = weekly_activity + ? WHERE user_id = ?',
-                [task.activity_point || 0, task.activity_point || 0, req.userId]
-              );
-            }
-          }
+          // 注意：活跃值在 quests.js 领取奖励时统一添加，不再在这里添加
         }
       }
     } catch (err) {

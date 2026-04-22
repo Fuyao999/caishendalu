@@ -293,11 +293,13 @@ router.post('/claim', authMiddleware, async (req, res, next) => {
         if (progress[0].claimed === 1) {
             return res.json({ code: 400, message: '奖励已领取' });
         }
-        
+
         // 发放奖励
+        console.log('=== 发放奖励 ===');
+        console.log('quest:', quest.id, 'gold:', quest.reward_gold, 'merit:', quest.reward_merit, 'frag:', quest.reward_fragment);
         const updates = [];
         const values = [];
-        
+
         if (quest.reward_gold > 0) {
             updates.push('gold = gold + ?');
             values.push(quest.reward_gold);
@@ -333,10 +335,41 @@ router.post('/claim', authMiddleware, async (req, res, next) => {
         
         if (updates.length > 0) {
             values.push(userId);
+            console.log('执行SQL:', 'UPDATE player_data SET ' + updates.join(', ') + ' WHERE user_id = ?');
+            console.log('参数:', values);
             await pool.query(
                 'UPDATE player_data SET ' + updates.join(', ') + ' WHERE user_id = ?',
                 values
             );
+            console.log('奖励已发放');
+        } else {
+            console.log('没有奖励可发放，updates为空');
+        }
+
+        // 更新活跃值
+        console.log('开始更新活跃值...');
+        console.log('quest.activity_point =', quest.activity_point, 'type:', typeof quest.activity_point);
+        console.log('userId =', userId, 'type:', typeof userId);
+        
+        if (quest.activity_point && quest.activity_point > 0) {
+            console.log('条件满足，执行更新');
+            
+            // 先查询当前值
+            const [before] = await pool.query('SELECT daily_activity, weekly_activity FROM player_activity WHERE user_id = ?', [userId]);
+            console.log('更新前:', JSON.stringify(before));
+            
+            // 执行更新
+            const result = await pool.query(
+                'UPDATE player_activity SET daily_activity = daily_activity + ?, weekly_activity = weekly_activity + ? WHERE user_id = ?',
+                [quest.activity_point, quest.activity_point, userId]
+            );
+            console.log('UPDATE result:', JSON.stringify(result));
+            
+            // 查询更新后的值
+            const [after] = await pool.query('SELECT daily_activity, weekly_activity FROM player_activity WHERE user_id = ?', [userId]);
+            console.log('更新后:', JSON.stringify(after));
+        } else {
+            console.log('条件不满足，quest.activity_point =', quest.activity_point);
         }
 
         // 更新quest_progress的claimed状态

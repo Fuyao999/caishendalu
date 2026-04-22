@@ -40,11 +40,22 @@ async function checkAndResetActivity(userId) {
     const player = rows[0];
     
     // 检查是否需要重置每日
+    // 如果 last_claim_date 不是今天，需要重置并更新日期
+    // 但如果 daily_activity > 0，说明今天已经领过活跃值了，不要覆盖
     if (player.last_claim_date !== today) {
-        await pool.query(
-            'UPDATE player_activity SET daily_activity = 0, daily_claimed = \'{}\', last_claim_date = ? WHERE user_id = ?',
-            [today, userId]
-        );
+        if (player.daily_activity === 0) {
+            // 没有今天的活跃值，可以安全重置
+            await pool.query(
+                'UPDATE player_activity SET daily_activity = 0, daily_claimed = \'{}\', last_claim_date = ? WHERE user_id = ?',
+                [today, userId]
+            );
+        } else {
+            // 有今天的活跃值，只更新日期不重置
+            await pool.query(
+                'UPDATE player_activity SET last_claim_date = ? WHERE user_id = ?',
+                [today, userId]
+            );
+        }
     }
     
     // 检查是否需要重置每周
@@ -112,6 +123,7 @@ router.get('/info', authMiddleware, async (req, res, next) => {
             'SELECT * FROM player_activity WHERE user_id = ?',
             [userId]
         );
+        console.log('[activity/info] DEBUG: userId=', userId, 'activityRows=', JSON.stringify(activityRows));
         const activity = activityRows[0] || { daily_activity: 0, weekly_activity: 0, daily_claimed: '{}', weekly_claimed: '{}' };
         
         // 解析已领取记录
@@ -384,21 +396,12 @@ router.post('/sync', authMiddleware, async (req, res, next) => {
             );
         }
         
-        // 如果任务完成，更新活跃值
+        // 注意：活跃值在 quests.js 领取奖励时统一添加，不再在这里添加
         let activityGained = 0;
         if (currentProgress >= task.target_count) {
-            // 检查是否已经计算过活跃值（避免重复）
-            if (progressRows.length === 0 || progressRows[0].progress < task.target_count) {
-                activityGained = task.activity_point || 0;
-                
-                // 更新玩家活跃值
-                await pool.query(
-                    'UPDATE player_activity SET daily_activity = daily_activity + ?, weekly_activity = weekly_activity + ? WHERE user_id = ?',
-                    [activityGained, activityGained, userId]
-                );
-            }
+            activityGained = task.activity_point || 0;
         }
-        
+
         return success(res, {
             task_id: task.id,
             progress: currentProgress,
@@ -438,15 +441,7 @@ router.post('/share', authMiddleware, async (req, res, next) => {
                     [userId, task.id, currentProgress]
                 );
             }
-            // 更新活跃值
-            if (currentProgress >= task.target_count) {
-                if (progressRows.length === 0 || (progressRows[0].progress || 0) < task.target_count) {
-                    await pool.query(
-                        'UPDATE player_activity SET daily_activity = daily_activity + ?, weekly_activity = weekly_activity + ? WHERE user_id = ?',
-                        [task.activity_point || 0, task.activity_point || 0, userId]
-                    );
-                }
-            }
+            // 注意：活跃值在 quests.js 领取奖励时统一添加，不再在这里添加
         }
         return success(res, { shared: true }, '分享成功');
     } catch (err) { next(err); }

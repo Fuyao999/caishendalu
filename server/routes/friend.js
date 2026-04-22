@@ -176,15 +176,7 @@ router.post('/add', authMiddleware, async (req, res) => {
                 [userId, task.id, currentProgress]
               );
             }
-            // 更新活跃值
-            if (currentProgress >= task.target_count) {
-              if (progressRows.length === 0 || (progressRows[0].progress || 0) < task.target_count) {
-                await db.pool.query(
-                  'UPDATE player_activity SET daily_activity = daily_activity + ?, weekly_activity = weekly_activity + ? WHERE user_id = ?',
-                  [task.activity_point || 0, task.activity_point || 0, userId]
-                );
-              }
-            }
+            // 注意：活跃值在 quests.js 领取奖励时统一添加，不再在这里添加
           }
         } catch (err) {
           console.error('更新邀请好友任务失败:', err);
@@ -294,15 +286,7 @@ router.post('/visit/:friendId', authMiddleware, async (req, res) => {
                 [userId, task.id, currentProgress]
               );
             }
-            // 更新活跃值
-            if (currentProgress >= task.target_count) {
-              if (progressRows.length === 0 || (progressRows[0].progress || 0) < task.target_count) {
-                await db.pool.query(
-                  'UPDATE player_activity SET daily_activity = daily_activity + ?, weekly_activity = weekly_activity + ? WHERE user_id = ?',
-                  [task.activity_point || 0, task.activity_point || 0, userId]
-                );
-              }
-            }
+            // 注意：活跃值在 quests.js 领取奖励时统一添加，不再在这里添加
           }
         } catch (err) {
           console.error('更新拜访好友任务失败:', err);
