@@ -56,7 +56,28 @@ router.post('/register', async (req, res, next) => {
     
     // 创建玩家数据
     const playerNick = nickname || '无名散修';
-    const invitationCode = 'CS' + Math.random().toString(36).substring(2, 8).toUpperCase();
+    // 生成唯一的5位邀请码（字母+数字，最多重试20次）
+    let invitationCode;
+    let inviteAttempts = 0;
+    do {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let code = '';
+      for (let i = 0; i < 5; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      const [dup] = await pool.query(
+        'SELECT id FROM player_data WHERE invitation_code = ?', [code]
+      );
+      if (dup.length === 0) {
+        invitationCode = code;
+        break;
+      }
+      inviteAttempts++;
+    } while (inviteAttempts < 20);
+    if (!invitationCode) {
+      return fail(res, '注册失败，请重试');
+    }
+
     await pool.query(
       'INSERT INTO player_data (user_id, player_id, nickname, gold, invitation_code) VALUES (?, ?, ?, 2400, ?)',
       [userId, playerId, playerNick, invitationCode]
@@ -136,10 +157,7 @@ router.post('/login', async (req, res, next) => {
     );
     
     const token = generateToken(user.id, user.username, playerRows[0]?.player_id);
-        console.log('=== LOGIN DEBUG ===');
-        console.log('user.id:', user.id);
-        console.log('playerRows:', playerRows);
-        console.log('player_id to embed:', playerRows[0]?.player_id);
+
     
     // 记日志
     await pool.query(

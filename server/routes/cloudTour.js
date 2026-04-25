@@ -171,7 +171,7 @@ router.get('/list', authMiddleware, async (req, res, next) => {
 
 // 执行云游化缘
 router.post('/alms', authMiddleware, async (req, res, next) => {
-  console.log('[CloudTour alms] 收到化缘请求, userId:', req.user?.userId);
+
   try {
     const { targetPlayerId } = req.body;
     if (!targetPlayerId) return fail(res, '请选择要化缘的目标');

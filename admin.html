@@ -66,6 +66,18 @@
             display: inline-block;
         }
         
+        .submenu li {
+            padding: 10px 20px !important;
+            font-size: 13px !important;
+            color: #aaa !important;
+            cursor: pointer !important;
+        }
+        
+        .submenu li:hover {
+            color: #fff !important;
+            background: #0f3460 !important;
+        }
+        
         /* 主内容区 */
         .main-content {
             flex: 1;
@@ -345,6 +357,16 @@
                 <li onclick="showPage('orders')">
                     <i>📦</i><span>订单管理</span>
                 </li>
+                <li onclick="toggleAgentSubmenu()">
+                    <i>👥</i><span>代理管理</span><span style="float:right">▶</span>
+                </li>
+                <ul id="agentSubmenu" class="submenu" style="display:none;list-style:none;padding-left:30px">
+                    <li onclick="event.stopPropagation();showPage('activationCodes')">🔑 激活码管理</li>
+                    <li onclick="event.stopPropagation();showPage('agentManage')">👤 代理列表</li>
+                    <li onclick="event.stopPropagation();showPage('commissionManage')">💰 佣金记录</li>
+                    <li onclick="event.stopPropagation();showPage('withdrawalManage')">💸 提现审批</li>
+                    <li onclick="event.stopPropagation();showPage('agentConfig')">⚙️ 代理配置</li>
+                </ul>
                 <li onclick="showPage('announcements')">
                     <i>📢</i><span>公告管理</span>
                 </li>
@@ -999,6 +1021,106 @@
                             </tbody>
                         </table>
                         <div class="pagination"><button>上一页</button><button class="active">1</button><button>2</button><button>3</button><button>下一页</button></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 激活码管理 -->
+            <div id="activationCodes" class="page" style="display:none;">
+                <div class="header">
+                    <h2>🔑 激活码管理</h2>
+                    <div><button class="btn btn-primary" onclick="generateActivationCodes()">生成激活码</button></div>
+                </div>
+                <div class="search-box">
+                    <select id="acStatusFilter" onchange="loadActivationCodes()">
+                        <option value="">全部状态</option>
+                        <option value="unused">未使用</option>
+                        <option value="used">已使用</option>
+                        <option value="cancelled">已作废</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="loadActivationCodes()">刷新</button>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><span class="panel-title">激活码列表</span><span id="acCount" style="font-size:12px;color:#888;margin-left:10px"></span></div>
+                    <div class="panel-body">
+                        <table>
+                            <thead><tr><th>ID</th><th>激活码</th><th>状态</th><th>使用者</th><th>激活时间</th><th>销售者</th><th>创建时间</th><th>操作</th></tr></thead>
+                            <tbody id="acTableBody"><tr><td colspan="8" style="text-align:center;color:#888">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 代理管理 -->
+            <div id="agentManage" class="page" style="display:none;">
+                <div class="header"><h2>👥 代理管理</h2></div>
+                <div class="panel">
+                    <div class="panel-header"><span class="panel-title">代理列表</span></div>
+                    <div class="panel-body">
+                        <table>
+                            <thead><tr><th>玩家ID</th><th>昵称</th><th>等级</th><th>直推单</th><th>团队单</th><th>高级人数</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead>
+                            <tbody id="agentTableBody"><tr><td colspan="9" style="text-align:center;color:#888">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 佣金管理 -->
+            <div id="commissionManage" class="page" style="display:none;">
+                <div class="header"><h2>💰 佣金管理</h2></div>
+                <div class="panel">
+                    <div class="panel-header"><span class="panel-title">佣金记录</span></div>
+                    <div class="panel-body">
+                        <table>
+                            <thead><tr><th>ID</th><th>代理</th><th>订单ID</th><th>类型</th><th>代数</th><th>金额</th><th>状态</th><th>时间</th></tr></thead>
+                            <tbody id="commissionTableBody"><tr><td colspan="8" style="text-align:center;color:#888">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 提现管理 -->
+            <div id="withdrawalManage" class="page" style="display:none;">
+                <div class="header"><h2>💸 提现管理</h2></div>
+                <div class="search-box">
+                    <select id="wdStatusFilter" onchange="loadWithdrawals()">
+                        <option value="">全部</option>
+                        <option value="pending">申请中</option>
+                        <option value="paid">已打款</option>
+                        <option value="rejected">已拒绝</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="loadWithdrawals()">刷新</button>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><span class="panel-title">提现申请</span></div>
+                    <div class="panel-body">
+                        <table>
+                            <thead><tr><th>ID</th><th>代理</th><th>金额</th><th>状态</th><th>申请时间</th><th>打款时间</th><th>备注</th><th>操作</th></tr></thead>
+                            <tbody id="withdrawalTableBody"><tr><td colspan="8" style="text-align:center;color:#888">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 代理配置 -->
+            <div id="agentConfig" class="page" style="display:none;">
+                <div class="header"><h2>⚙️ 代理配置</h2><button class="btn btn-primary" onclick="saveAgentConfig()">保存配置</button></div>
+                <div class="panel">
+                    <div class="panel-header"><span class="panel-title">佣金配置</span></div>
+                    <div class="panel-body">
+                        <table>
+                            <thead><tr><th>等级</th><th>直推佣金%</th><th>间推佣金%</th><th>团队奖金%</th><th>代数</th></tr></thead>
+                            <tbody id="commissionConfigBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="panel" style="margin-top:20px">
+                    <div class="panel-header"><span class="panel-title">升级条件</span></div>
+                    <div class="panel-body">
+                        <table>
+                            <thead><tr><th>目标等级</th><th>直推单</th><th>团队单</th><th>高级人数</th><th>要求等级</th></tr></thead>
+                            <tbody id="upgradeConfigBody"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -1676,6 +1798,19 @@
 
 
     <script>
+        // ===== 代理子菜单切换 =====
+        function toggleAgentSubmenu() {
+            var submenu = document.getElementById('agentSubmenu');
+            var arrow = document.querySelector('.nav-menu > li:nth-child(11) span');
+            if (submenu.style.display === 'none') {
+                submenu.style.display = 'block';
+                if (arrow) arrow.textContent = '▼';
+            } else {
+                submenu.style.display = 'none';
+                if (arrow) arrow.textContent = '▶';
+            }
+        }
+        
         // ===== 页面切换 =====
         function showPage(pageName) {
             document.querySelectorAll('.page').forEach(function(p){ p.style.display='none'; });
@@ -1683,6 +1818,7 @@
             document.querySelectorAll('.nav-menu li').forEach(function(li){ li.classList.remove('active'); });
             if(event && event.target) event.target.closest('li').classList.add('active');
             if (pageName === 'robots') loadRobots();
+            if (pageName === 'users') loadUsers();
         }
 
         // ===== Toast提示 =====
@@ -3239,18 +3375,376 @@ async function saveNewTitle() {
             if (!data || data.code !== 200) return;
             const u = data.data;
             showModal('用户详情 #' + userId, `
-                <div style="display:grid;gap:8px;font-size:13px">
-                    <div><b>用户名:</b> ${u.username || '-'}</div>
-                    <div><b>昵称:</b> ${u.player?.nickname || '-'}</div>
-                    <div><b>等级:</b> Lv.${u.player?.level || 1} ${u.player?.realm_name || '凡人'}</div>
-                    <div><b>金币:</b> ${(u.player?.gold || 0).toLocaleString()}</div>
-                    <div><b>元宝:</b> ${(u.player?.yuanbao || 0).toLocaleString()}</div>
-                    <div><b>VIP:</b> ${u.player?.vip_level || 0}</div>
-                    <div><b>累计充值:</b> ¥${u.player?.total_recharge || '0.00'}</div>
-                    <div><b>注册时间:</b> ${u.created_at ? new Date(u.created_at).toLocaleString() : '-'}</div>
-                    <div><b>最后登录:</b> ${u.last_login_at ? new Date(u.last_login_at).toLocaleString() : '-'}</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;max-height:70vh;overflow-y:auto">
+                    <div style="background:#2a3a4a;padding:10px;border-radius:5px">
+                        <div style="color:#4ade80;margin-bottom:8px;font-weight:bold">账号信息</div>
+                        <div><b>用户ID:</b> ${u.id}</div>
+                        <div><b>用户名:</b> ${u.username || '-'}</div>
+                        <div><b>玩家ID:</b> ${u.player_id || '-'}</div>
+                        <div><b>状态:</b> <select id="edit_status" style="background:#34495e;color:#fff;border:1px solid #4ade80;border-radius:3px;padding:2px 6px">
+                            <option value="1" ${u.status === 1 ? 'selected' : ''}>正常</option>
+                            <option value="0" ${u.status === 0 ? 'selected' : ''}>封禁</option>
+                        </select></div>
+                        <div><b>注册时间:</b> ${u.created_at ? new Date(u.created_at).toLocaleString() : '-'}</div>
+                        <div><b>最后登录:</b> ${u.last_login_at ? new Date(u.last_login_at).toLocaleString() : '-'}</div>
+                        <div><b>封禁原因:</b> <input id="edit_ban_reason" value="${u.ban_reason || ''}" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:120px"></div>
+                    </div>
+                    <div style="background:#2a3a4a;padding:10px;border-radius:5px">
+                        <div style="color:#4ade80;margin-bottom:8px;font-weight:bold">货币资源</div>
+                        <div><b>香火钱(金币):</b> <input id="edit_gold" value="${u.gold || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:100px"></div>
+                        <div><b>元宝:</b> <input id="edit_yuanbao" value="${u.yuanbao || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:100px"></div>
+                        <div><b>功德值:</b> <input id="edit_merit" value="${u.merit || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:100px"></div>
+                        <div><b>善缘值:</b> <input id="edit_faith" value="${u.faith || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:100px"></div>
+                        <div><b>招财幡:</b> <input id="edit_banners" value="${u.banners || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:100px"></div>
+                        <div><b>声望:</b> <input id="edit_reputation" value="${u.reputation || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:100px"></div>
+
+                        <div><b>法力值:</b> <input id="edit_mana" value="${u.mana || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:100px"></div>
+                        <div><b>碎片:</b> <input id="edit_fragments" value="${u.fragments || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:100px"></div>
+                    </div>
+                    <div style="background:#2a3a4a;padding:10px;border-radius:5px">
+                        <div style="color:#4ade80;margin-bottom:8px;font-weight:bold">修炼信息</div>
+                        <div><b>昵称:</b> <input id="edit_nickname" value="${u.nickname || ''}" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:100px"></div>
+                        <div><b>等级:</b> <input id="edit_level" value="${u.level || 1}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:60px"></div>
+                        <div><b>境界名:</b> <input id="edit_realm_name" value="${u.realm_name || ''}" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:100px"></div>
+                        <div><b>经验:</b> <input id="edit_exp" value="${u.exp || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:100px"></div>
+                    </div>
+                    <div style="background:#2a3a4a;padding:10px;border-radius:5px">
+                        <div style="color:#4ade80;margin-bottom:8px;font-weight:bold">每日相关</div>
+                        <div><b>今日化缘次数:</b> <input id="edit_daily_alms" value="${u.daily_alms || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:60px"></div>
+                        <div><b>今日签到:</b> <input id="edit_daily_sign" value="${u.daily_sign || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:60px"></div>
+                        <div><b>连续签到:</b> <input id="edit_sign_streak" value="${u.sign_streak || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:60px"></div>
+                        <div><b>累计签到:</b> <input id="edit_total_sign" value="${u.total_sign || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:60px"></div>
+                    </div>
+                    <div style="background:#2a3a4a;padding:10px;border-radius:5px">
+                        <div style="color:#4ade80;margin-bottom:8px;font-weight:bold">化缘统计</div>
+                        <div><b>化缘总次数:</b> ${u.alms_count || 0}</div>
+                        <div><b>触发好运次数:</b> ${u.great_count || 0}</div>
+                        <div><b>连续未触发次数:</b> ${u.alms_miss_streak || 0}</div>
+                        <div><b>供奉次数:</b> ${u.worship_count || 0}</div>
+                    </div>
+                    <div style="background:#2a3a4a;padding:10px;border-radius:5px">
+                        <div style="color:#4ade80;margin-bottom:8px;font-weight:bold">社交关系</div>
+                        <div><b>邀请码:</b> ${u.invitation_code || '-'}</div>
+                        <div><b>邀请人ID:</b> ${u.invited_by || '-'}</div>
+                    </div>
+                </div>
+                    <div style="background:#2a3a4a;padding:10px;border-radius:5px">
+                        <div style="color:#4ade80;margin-bottom:8px;font-weight:bold">战斗属性</div>
+                        <div><b>生命值:</b> <input id="edit_hp" value="${u.hp || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:60px"> / <input id="edit_hp_max" value="${u.hp_max || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:60px"></div>
+                        <div><b>法力值:</b> <input id="edit_mp" value="${u.mp || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:60px"> / <input id="edit_mp_max" value="${u.mp_max || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:60px"></div>
+                        <div><b>攻击:</b> <input id="edit_atk" value="${u.atk || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:60px"></div>
+                        <div><b>防御:</b> <input id="edit_def" value="${u.def || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:60px"></div>
+                        <div><b>速度:</b> <input id="edit_speed" value="${u.speed || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:60px"></div>
+                        <div><b>幸运:</b> <input id="edit_luck" value="${u.luck || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:60px"></div>
+                        <div><b>魅力:</b> <input id="edit_charm" value="${u.charm || 0}" type="number" style="background:#34495e;color:#fff;border:1px solid #555;border-radius:3px;padding:2px 6px;width:60px"></div>
+                    </div>
+                </div>
+                <div style="margin-top:15px;text-align:center">
+                    <button onclick="saveUser(${u.id})" style="background:#27ae60;color:#fff;border:none;padding:10px 30px;border-radius:5px;cursor:pointer;font-size:14px">💾 保存基础信息</button>
+                </div>
+                <div style="margin-top:15px;padding:10px;background:#1a2a3a;border-radius:5px">
+                    <div style="color:#f39c12;margin-bottom:8px;font-weight:bold">🎰 化缘概率个性化配置 <span style="font-size:11px;color:#888">(留空使用全局配置)</span></div>
+                    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:5px;font-size:10px">
+                        <div style="background:#2a3a4a;padding:5px;border-radius:3px">
+                            <div style="color:#f39c12;margin-bottom:3px;font-weight:bold">天禄</div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px">
+                                <div><b style="color:#f1c40f">JP</b><input id="ao_tianlu_JP" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#e74c3c">BW</b><input id="ao_tianlu_BW" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#3498db">NM</b><input id="ao_tianlu_NM" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#2ecc71">SW</b><input id="ao_tianlu_SW" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#9b59b6">MS</b><input id="ao_tianlu_MS" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                            </div>
+                        </div>
+                        <div style="background:#2a3a4a;padding:5px;border-radius:3px">
+                            <div style="color:#f39c12;margin-bottom:3px;font-weight:bold">镇岳</div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px">
+                                <div><b style="color:#f1c40f">JP</b><input id="ao_zhenyue_JP" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#e74c3c">BW</b><input id="ao_zhenyue_BW" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#3498db">NM</b><input id="ao_zhenyue_NM" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#2ecc71">SW</b><input id="ao_zhenyue_SW" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#9b59b6">MS</b><input id="ao_zhenyue_MS" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                            </div>
+                        </div>
+                        <div style="background:#2a3a4a;padding:5px;border-radius:3px">
+                            <div style="color:#f39c12;margin-bottom:3px;font-weight:bold">龙吟</div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px">
+                                <div><b style="color:#f1c40f">JP</b><input id="ao_longyin_JP" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#e74c3c">BW</b><input id="ao_longyin_BW" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#3498db">NM</b><input id="ao_longyin_NM" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#2ecc71">SW</b><input id="ao_longyin_SW" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#9b59b6">MS</b><input id="ao_longyin_MS" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                            </div>
+                        </div>
+                        <div style="background:#2a3a4a;padding:5px;border-radius:3px">
+                            <div style="color:#f39c12;margin-bottom:3px;font-weight:bold">扶摇</div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px">
+                                <div><b style="color:#f1c40f">JP</b><input id="ao_fuyao_JP" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#e74c3c">BW</b><input id="ao_fuyao_BW" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#3498db">NM</b><input id="ao_fuyao_NM" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#2ecc71">SW</b><input id="ao_fuyao_SW" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#9b59b6">MS</b><input id="ao_fuyao_MS" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                            </div>
+                        </div>
+                        <div style="background:#2a3a4a;padding:5px;border-radius:3px">
+                            <div style="color:#f39c12;margin-bottom:3px;font-weight:bold">南明</div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px">
+                                <div><b style="color:#f1c40f">JP</b><input id="ao_nanming_JP" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#e74c3c">BW</b><input id="ao_nanming_BW" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#3498db">NM</b><input id="ao_nanming_NM" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#2ecc71">SW</b><input id="ao_nanming_SW" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#9b59b6">MS</b><input id="ao_nanming_MS" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                            </div>
+                        </div>
+                        <div style="background:#2a3a4a;padding:5px;border-radius:3px">
+                            <div style="color:#f39c12;margin-bottom:3px;font-weight:bold">地宝</div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px">
+                                <div><b style="color:#f1c40f">JP</b><input id="ao_dibao_JP" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#e74c3c">BW</b><input id="ao_dibao_BW" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#3498db">NM</b><input id="ao_dibao_NM" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#2ecc71">SW</b><input id="ao_dibao_SW" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b style="color:#9b59b6">MS</b><input id="ao_dibao_MS" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-top:8px">
+                        <div style="background:#2a3a4a;padding:5px;border-radius:3px">
+                            <div style="color:#f39c12;margin-bottom:3px;font-weight:bold">后2区概率</div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">
+                                <div><b>甘泽W2</b><input id="ao_ganze_W2" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b>甘泽L2</b><input id="ao_ganze_L2" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b>流泉W2</b><input id="ao_liquan_W2" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b>流泉L2</b><input id="ao_liquan_L2" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                            </div>
+                        </div>
+                        <div style="background:#2a3a4a;padding:5px;border-radius:3px">
+                            <div style="color:#f39c12;margin-bottom:3px;font-weight:bold">连亏保护</div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">
+                                <div><b>Lv3触发</b><input id="ao_ls3_trigger" type="number" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b>Lv3系数</b><input id="ao_ls3_factor" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b>Lv5触发</b><input id="ao_ls5_trigger" type="number" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b>Lv5MS</b><input id="ao_ls5_MS" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                            </div>
+                        </div>
+                        <div style="background:#2a3a4a;padding:5px;border-radius:3px">
+                            <div style="color:#f39c12;margin-bottom:3px;font-weight:bold">稳求/险求系数</div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">
+                                <div><b>稳lm</b><input id="ao_safe_lm" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b>稳mm</b><input id="ao_safe_mm" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b>险lm</b><input id="ao_risk_lm" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                                <div><b>险mm</b><input id="ao_risk_mm" type="number" step="0.01" style="width:100%;background:#34495e;color:#fff;border:1px solid #555;border-radius:2px;padding:1px 2px"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top:10px;text-align:center">
+                        <button onclick="saveAlmsOverride(${u.id})" style="background:#e67e22;color:#fff;border:none;padding:8px 25px;border-radius:4px;cursor:pointer;font-size:13px">💾 保存化缘概率</button>
+                        <span style="color:#888;font-size:11px;margin-left:10px">提示：留空表示使用全局配置</span>
+                    </div>
                 </div>
             `);
+        }
+        
+        async function saveUser(userId) {
+            const updateData = {
+                status: parseInt(document.getElementById('edit_status').value),
+                ban_reason: document.getElementById('edit_ban_reason').value,
+                nickname: document.getElementById('edit_nickname').value,
+                level: parseInt(document.getElementById('edit_level').value),
+                realm_name: document.getElementById('edit_realm_name').value,
+                exp: parseInt(document.getElementById('edit_exp').value) || 0,
+                gold: parseInt(document.getElementById('edit_gold').value) || 0,
+                yuanbao: parseInt(document.getElementById('edit_yuanbao').value) || 0,
+                merit: parseInt(document.getElementById('edit_merit').value) || 0,
+                faith: parseInt(document.getElementById('edit_faith').value) || 0,
+                banners: parseInt(document.getElementById('edit_banners').value) || 0,
+                reputation: parseInt(document.getElementById('edit_reputation').value) || 0,
+                hp: parseInt(document.getElementById('edit_hp').value) || 0,
+                hp_max: parseInt(document.getElementById('edit_hp_max').value) || 0,
+                mp: parseInt(document.getElementById('edit_mp').value) || 0,
+                mp_max: parseInt(document.getElementById('edit_mp_max').value) || 0,
+                atk: parseInt(document.getElementById('edit_atk').value) || 0,
+                def: parseInt(document.getElementById('edit_def').value) || 0,
+                speed: parseInt(document.getElementById('edit_speed').value) || 0,
+                luck: parseInt(document.getElementById('edit_luck').value) || 0,
+                charm: parseInt(document.getElementById('edit_charm').value) || 0,
+                daily_alms: parseInt(document.getElementById('edit_daily_alms').value) || 0,
+                daily_sign: parseInt(document.getElementById('edit_daily_sign').value) || 0,
+                sign_streak: parseInt(document.getElementById('edit_sign_streak').value) || 0
+            };
+            
+            const data = await apiFetch('/api/admin/users/' + userId + '/update', {
+                method: 'POST',
+                body: JSON.stringify(updateData)
+            });
+            
+            if (data && data.code === 200) {
+                alert('保存成功');
+                closeGlobalModal();
+            } else {
+                alert('保存失败: ' + (data?.message || '未知错误'));
+            }
+        }
+        
+        async function saveAlmsOverride(userId) {
+            const override = {};
+            
+            // 前6区概率 - 天禄
+            const tianlu_JP = parseFloat(document.getElementById('ao_tianlu_JP').value);
+            const tianlu_BW = parseFloat(document.getElementById('ao_tianlu_BW').value);
+            const tianlu_NM = parseFloat(document.getElementById('ao_tianlu_NM').value);
+            const tianlu_SW = parseFloat(document.getElementById('ao_tianlu_SW').value);
+            const tianlu_MS = parseFloat(document.getElementById('ao_tianlu_MS').value);
+            if (tianlu_JP || tianlu_BW || tianlu_NM || tianlu_SW || tianlu_MS) {
+                override.areas = override.areas || {};
+                override.areas.tianlu = {};
+                if (tianlu_JP) override.areas.tianlu.JP = tianlu_JP;
+                if (tianlu_BW) override.areas.tianlu.BW = tianlu_BW;
+                if (tianlu_NM) override.areas.tianlu.NM = tianlu_NM;
+                if (tianlu_SW) override.areas.tianlu.SW = tianlu_SW;
+                if (tianlu_MS) override.areas.tianlu.MS = tianlu_MS;
+            }
+            
+            // 前6区概率 - 镇岳
+            const zhenyue_JP = parseFloat(document.getElementById('ao_zhenyue_JP').value);
+            const zhenyue_BW = parseFloat(document.getElementById('ao_zhenyue_BW').value);
+            const zhenyue_NM = parseFloat(document.getElementById('ao_zhenyue_NM').value);
+            const zhenyue_SW = parseFloat(document.getElementById('ao_zhenyue_SW').value);
+            const zhenyue_MS = parseFloat(document.getElementById('ao_zhenyue_MS').value);
+            if (zhenyue_JP || zhenyue_BW || zhenyue_NM || zhenyue_SW || zhenyue_MS) {
+                override.areas = override.areas || {};
+                override.areas.zhenyue = {};
+                if (zhenyue_JP) override.areas.zhenyue.JP = zhenyue_JP;
+                if (zhenyue_BW) override.areas.zhenyue.BW = zhenyue_BW;
+                if (zhenyue_NM) override.areas.zhenyue.NM = zhenyue_NM;
+                if (zhenyue_SW) override.areas.zhenyue.SW = zhenyue_SW;
+                if (zhenyue_MS) override.areas.zhenyue.MS = zhenyue_MS;
+            }
+            
+            // 前6区概率 - 龙吟
+            const longyin_JP = parseFloat(document.getElementById('ao_longyin_JP').value);
+            const longyin_BW = parseFloat(document.getElementById('ao_longyin_BW').value);
+            const longyin_NM = parseFloat(document.getElementById('ao_longyin_NM').value);
+            const longyin_SW = parseFloat(document.getElementById('ao_longyin_SW').value);
+            const longyin_MS = parseFloat(document.getElementById('ao_longyin_MS').value);
+            if (longyin_JP || longyin_BW || longyin_NM || longyin_SW || longyin_MS) {
+                override.areas = override.areas || {};
+                override.areas.longyin = {};
+                if (longyin_JP) override.areas.longyin.JP = longyin_JP;
+                if (longyin_BW) override.areas.longyin.BW = longyin_BW;
+                if (longyin_NM) override.areas.longyin.NM = longyin_NM;
+                if (longyin_SW) override.areas.longyin.SW = longyin_SW;
+                if (longyin_MS) override.areas.longyin.MS = longyin_MS;
+            }
+            
+            // 前6区概率 - 扶摇
+            const fuyao_JP = parseFloat(document.getElementById('ao_fuyao_JP').value);
+            const fuyao_BW = parseFloat(document.getElementById('ao_fuyao_BW').value);
+            const fuyao_NM = parseFloat(document.getElementById('ao_fuyao_NM').value);
+            const fuyao_SW = parseFloat(document.getElementById('ao_fuyao_SW').value);
+            const fuyao_MS = parseFloat(document.getElementById('ao_fuyao_MS').value);
+            if (fuyao_JP || fuyao_BW || fuyao_NM || fuyao_SW || fuyao_MS) {
+                override.areas = override.areas || {};
+                override.areas.fuyao = {};
+                if (fuyao_JP) override.areas.fuyao.JP = fuyao_JP;
+                if (fuyao_BW) override.areas.fuyao.BW = fuyao_BW;
+                if (fuyao_NM) override.areas.fuyao.NM = fuyao_NM;
+                if (fuyao_SW) override.areas.fuyao.SW = fuyao_SW;
+                if (fuyao_MS) override.areas.fuyao.MS = fuyao_MS;
+            }
+            
+            // 前6区概率 - 南明
+            const nanming_JP = parseFloat(document.getElementById('ao_nanming_JP').value);
+            const nanming_BW = parseFloat(document.getElementById('ao_nanming_BW').value);
+            const nanming_NM = parseFloat(document.getElementById('ao_nanming_NM').value);
+            const nanming_SW = parseFloat(document.getElementById('ao_nanming_SW').value);
+            const nanming_MS = parseFloat(document.getElementById('ao_nanming_MS').value);
+            if (nanming_JP || nanming_BW || nanming_NM || nanming_SW || nanming_MS) {
+                override.areas = override.areas || {};
+                override.areas.nanming = {};
+                if (nanming_JP) override.areas.nanming.JP = nanming_JP;
+                if (nanming_BW) override.areas.nanming.BW = nanming_BW;
+                if (nanming_NM) override.areas.nanming.NM = nanming_NM;
+                if (nanming_SW) override.areas.nanming.SW = nanming_SW;
+                if (nanming_MS) override.areas.nanming.MS = nanming_MS;
+            }
+            
+            // 前6区概率 - 地宝
+            const dibao_JP = parseFloat(document.getElementById('ao_dibao_JP').value);
+            const dibao_BW = parseFloat(document.getElementById('ao_dibao_BW').value);
+            const dibao_NM = parseFloat(document.getElementById('ao_dibao_NM').value);
+            const dibao_SW = parseFloat(document.getElementById('ao_dibao_SW').value);
+            const dibao_MS = parseFloat(document.getElementById('ao_dibao_MS').value);
+            if (dibao_JP || dibao_BW || dibao_NM || dibao_SW || dibao_MS) {
+                override.areas = override.areas || {};
+                override.areas.dibao = {};
+                if (dibao_JP) override.areas.dibao.JP = dibao_JP;
+                if (dibao_BW) override.areas.dibao.BW = dibao_BW;
+                if (dibao_NM) override.areas.dibao.NM = dibao_NM;
+                if (dibao_SW) override.areas.dibao.SW = dibao_SW;
+                if (dibao_MS) override.areas.dibao.MS = dibao_MS;
+            }
+            
+            // 后2区概率 - 甘泽
+            const ganze_W2 = parseFloat(document.getElementById('ao_ganze_W2').value);
+            const ganze_L2 = parseFloat(document.getElementById('ao_ganze_L2').value);
+            if (ganze_W2 || ganze_L2) {
+                override.gamble = override.gamble || {};
+                if (ganze_W2) override.gamble.ganze_W2 = ganze_W2;
+                if (ganze_L2) override.gamble.ganze_L2 = ganze_L2;
+            }
+            
+            // 后2区概率 - 流泉
+            const liquan_W2 = parseFloat(document.getElementById('ao_liquan_W2').value);
+            const liquan_L2 = parseFloat(document.getElementById('ao_liquan_L2').value);
+            if (liquan_W2 || liquan_L2) {
+                override.gamble = override.gamble || {};
+                if (liquan_W2) override.gamble.liquan_W2 = liquan_W2;
+                if (liquan_L2) override.gamble.liquan_L2 = liquan_L2;
+            }
+            
+            // 连亏保护
+            const ls3_trigger = parseFloat(document.getElementById('ao_ls3_trigger').value);
+            const ls3_factor = parseFloat(document.getElementById('ao_ls3_factor').value);
+            const ls5_trigger = parseFloat(document.getElementById('ao_ls5_trigger').value);
+            const ls5_MS = parseFloat(document.getElementById('ao_ls5_MS').value);
+            if (ls3_trigger || ls3_factor || ls5_trigger || ls5_MS) {
+                override.lossStreak = {};
+                if (ls3_trigger || ls3_factor) {
+                    override.lossStreak.level3 = {};
+                    if (ls3_trigger) override.lossStreak.level3.trigger = ls3_trigger;
+                    if (ls3_factor) override.lossStreak.level3.MS_factor = ls3_factor;
+                }
+                if (ls5_trigger || ls5_MS) {
+                    override.lossStreak.level5 = { trigger: ls5_trigger || 5 };
+                    if (ls5_MS) override.lossStreak.level5.MS = ls5_MS;
+                }
+            }
+            
+            // 稳求/险求系数
+            const safe_lm = parseFloat(document.getElementById('ao_safe_lm').value);
+            const safe_mm = parseFloat(document.getElementById('ao_safe_mm').value);
+            const risk_lm = parseFloat(document.getElementById('ao_risk_lm').value);
+            const risk_mm = parseFloat(document.getElementById('ao_risk_mm').value);
+            if (safe_lm || safe_mm) {
+                override.safe = {};
+                if (safe_lm) override.safe.lm = safe_lm;
+                if (safe_mm) override.safe.mm = safe_mm;
+            }
+            if (risk_lm || risk_mm) {
+                override.risk = {};
+                if (risk_lm) override.risk.lm = risk_lm;
+                if (risk_mm) override.risk.mm = risk_mm;
+            }
+            
+            const data = await apiFetch('/api/admin/users/' + userId + '/alms-override', {
+                method: 'POST',
+                body: JSON.stringify(override)
+            });
+            
+            if (data && data.code === 200) {
+                alert('化缘概率配置已保存');
+            } else {
+                alert('保存失败: ' + (data?.message || '未知错误'));
+            }
         }
 
         async function banUser(userId) {
@@ -4595,5 +5089,6 @@ async function updateSetting(input) {
 
         </script>
 <!-- <script src="admin-functions.js"></script> -->
+<script src="admin_agent.js"></script>
 </body>
 </html>

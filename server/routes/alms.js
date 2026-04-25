@@ -61,6 +61,61 @@ async function getAlmsConfig() {
   }
 }
 
+// 获取用户个性化概率覆盖（与全局配置合并）
+async function getAlmsConfigWithOverride(userId) {
+  const cfg = await getAlmsConfig();
+  
+  // 深拷贝全局配置
+  const merged = JSON.parse(JSON.stringify(cfg));
+  
+  try {
+    const [rows] = await pool.query(
+      'SELECT alms_override FROM player_data WHERE user_id = ?',
+      [userId]
+    );
+    if (rows.length === 0 || !rows[0].alms_override) {
+      return cfg; // 无个性化配置，返回全局
+    }
+    
+    const override = rows[0].alms_override;
+    if (typeof override === 'string') {
+      return cfg; // 解析失败，返回全局
+    }
+    
+    // 合并前6区概率
+    if (override.areas) {
+      for (const [areaId, probs] of Object.entries(override.areas)) {
+        if (merged.areas[areaId]) {
+          merged.areas[areaId] = { ...merged.areas[areaId], ...probs };
+        }
+      }
+    }
+    
+    // 合并后2区概率
+    if (override.gamble) {
+      merged.gamble = { ...merged.gamble, ...override.gamble };
+    }
+    
+    // 合并连亏保护
+    if (override.lossStreak) {
+      merged.lossStreak = { ...merged.lossStreak, ...override.lossStreak };
+    }
+    
+    // 合并稳求/险求系数
+    if (override.safe) {
+      merged.safe = { ...merged.safe, ...override.safe };
+    }
+    if (override.risk) {
+      merged.risk = { ...merged.risk, ...override.risk };
+    }
+    
+    return merged;
+  } catch (e) {
+    console.error('获取用户概率覆盖失败:', e);
+    return cfg;
+  }
+}
+
 function getDefaultConfig() {
   return {
     areas: {
@@ -89,7 +144,7 @@ function getDefaultConfig() {
 // GET /api/alms/status - 化缘状态
 router.get('/status', authMiddleware, async (req, res, next) => {
   try {
-    const cfg = await getAlmsConfig();
+    const cfg = await getAlmsConfigWithOverride(req.userId);
     const [rows] = await pool.query(
       'SELECT gold, mana, daily_alms, alms_miss_streak, fragments FROM player_data WHERE user_id = ?',
       [req.userId]
@@ -120,7 +175,7 @@ router.get('/status', authMiddleware, async (req, res, next) => {
 
 // POST /api/alms/worship - 执行供奉
 router.post('/worship', authMiddleware, async (req, res, next) => {
-  console.log('[供奉] 收到请求, userId:', req.userId, 'body:', JSON.stringify(req.body));
+
   try {
     const { godId, type } = req.body;
 
@@ -128,7 +183,7 @@ router.post('/worship', authMiddleware, async (req, res, next) => {
       'UPDATE player_data SET worship_count = worship_count + 1 WHERE user_id = ?',
       [req.userId]
     );
-    console.log('[供奉] worship_count +1 完成');
+
 
     // 更新供奉任务进度
     try {
@@ -168,7 +223,7 @@ router.post('/go', authMiddleware, async (req, res, next) => {
   try {
     const { area, mode, choice } = req.body;
     const safeOrRisk = mode || choice; // 兼容 HTML 和 Cocos
-    const cfg = await getAlmsConfig();
+    const cfg = await getAlmsConfigWithOverride(req.userId);
 
     if (!area || !AREAS[area]) return fail(res, '无效的区域');
     if (!['safe', 'risk', 'risky'].includes(safeOrRisk)) return fail(res, '请选择稳求或险求');
@@ -299,14 +354,13 @@ router.post('/go', authMiddleware, async (req, res, next) => {
     const fragGain = resultKey === 'JP' ? 3 : resultKey === 'W2' ? 5 : 0;
     // 大吉时增加great_count
     const isGreat = resultKey === 'JP' || resultKey === 'W2';
-    console.log('[化缘] userId:', req.userId, 'alms_count+1, isGreat:', isGreat, 'resultKey:', resultKey);
-    console.log('[化缘] SQL:', `UPDATE player_data SET gold = gold + ?, mana = mana - ?, daily_alms = daily_alms - 1, alms_miss_streak = ?, merit = merit + ?, reputation = reputation + ?, fragments = fragments + ?, alms_count = alms_count + 1${isGreat ? ', great_count = great_count + 1' : ''}, deity_buff = ? WHERE user_id = ?`);
+
 
     await pool.query(
       `UPDATE player_data SET gold = gold + ?, mana = mana - ?, daily_alms = daily_alms - 1, alms_miss_streak = ?, merit = merit + ?, reputation = reputation + ?, fragments = fragments + ?, alms_count = alms_count + 1${isGreat ? ', great_count = great_count + 1' : ''}, deity_buff = ? WHERE user_id = ?`,
       [netGain, manaCost, newMissStreak, cfg.activeAlmsMerit || 5, repGain, fragGain, JSON.stringify(deityBuff), req.userId]
     );
-    console.log('[化缘] UPDATE执行完成');
+
 
     await pool.query(
       'INSERT INTO logs (user_id, action, detail) VALUES (?, ?, ?)',

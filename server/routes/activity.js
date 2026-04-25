@@ -123,7 +123,7 @@ router.get('/info', authMiddleware, async (req, res, next) => {
             'SELECT * FROM player_activity WHERE user_id = ?',
             [userId]
         );
-        console.log('[activity/info] DEBUG: userId=', userId, 'activityRows=', JSON.stringify(activityRows));
+
         const activity = activityRows[0] || { daily_activity: 0, weekly_activity: 0, daily_claimed: '{}', weekly_claimed: '{}' };
         
         // 解析已领取记录

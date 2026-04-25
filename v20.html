@@ -69,12 +69,14 @@
         .iv .in{font-size:10px;color:#FFD700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
         .iv .iq{position:absolute;top:2px;right:4px;background:#e74c3c;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;}
         .iv.emp{border-style:dashed;opacity:.3;} .iv.emp .ii{font-size:14px;}
+        /* 登录按钮按下效果 */
+        #game-login-btn:active,#game-reg-btn:active{transform:scale(0.96) !important;box-shadow:0 1px 3px rgba(0,0,0,0.3) !important;}
 
     </style>
 </head>
 <body>
 <!-- ===== 游戏登录/注册覆盖层 ===== -->
-<div id="game-login-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#0a0a1e 0%,#1a1a3e 50%,#0f1a2e 100%);z-index:10000;display:flex;align-items:center;justify-content:center;flex-direction:column">
+<div id="game-login-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,10,30,0.95);z-index:10000;display:flex;align-items:center;justify-content:center;flex-direction:column">
     <div style="text-align:center;margin-bottom:30px">
         <div style="font-size:64px;margin-bottom:10px">🏮</div>
         <h1 style="color:#FFD700;font-size:28px;margin:0;text-shadow:0 0 20px rgba(255,215,0,0.5)">财神大陆</h1>
@@ -86,7 +88,7 @@
         <div id="login-form-section">
             <input type="text" id="game-login-user" placeholder="账号" style="width:100%;padding:12px;background:#0a0a1e;border:1px solid #333;color:#eee;border-radius:8px;font-size:14px;margin-bottom:10px;box-sizing:border-box">
             <input type="password" id="game-login-pass" placeholder="密码" style="width:100%;padding:12px;background:#0a0a1e;border:1px solid #333;color:#eee;border-radius:8px;font-size:14px;margin-bottom:15px;box-sizing:border-box" onkeydown="if(event.key==='Enter')doGameLogin()">
-            <button id="game-login-btn" onclick="doGameLogin()" style="width:100%;padding:12px;background:linear-gradient(135deg,#FFD700,#FFA500);color:#1a1a2e;border:none;border-radius:8px;font-size:15px;font-weight:bold;cursor:pointer">进入财神大陆</button>
+            <button id="game-login-btn" onclick="doGameLogin()" style="width:100%;padding:12px;background:linear-gradient(135deg,#FFD700,#FFA500);color:#1a1a2e;border:none;border-radius:8px;font-size:15px;font-weight:bold;cursor:pointer;transition:transform 0.1s,box-shadow 0.1s;transform:scale(1)">进入财神大陆</button>
             <div style="text-align:center;margin-top:15px">
                 <span style="color:#888;font-size:12px">没有账号？</span>
                 <a onclick="switchToRegister()" style="color:#FFD700;font-size:12px;cursor:pointer;text-decoration:underline">立即注册</a>
@@ -101,7 +103,7 @@
             <input type="text" id="game-reg-nick" placeholder="昵称（选填，可以后改）" style="width:100%;padding:12px;background:#0a0a1e;border:1px solid #333;color:#eee;border-radius:8px;font-size:14px;margin-bottom:10px;box-sizing:border-box">
             <input type="password" id="game-reg-pass" placeholder="密码（至少6位）" style="width:100%;padding:12px;background:#0a0a1e;border:1px solid #333;color:#eee;border-radius:8px;font-size:14px;margin-bottom:10px;box-sizing:border-box">
             <input type="password" id="game-reg-pass2" placeholder="确认密码" style="width:100%;padding:12px;background:#0a0a1e;border:1px solid #333;color:#eee;border-radius:8px;font-size:14px;margin-bottom:15px;box-sizing:border-box" onkeydown="if(event.key==='Enter')doGameRegister()">
-            <button id="game-reg-btn" onclick="doGameRegister()" style="width:100%;padding:12px;background:linear-gradient(135deg,#2ecc71,#27ae60);color:white;border:none;border-radius:8px;font-size:15px;font-weight:bold;cursor:pointer">创建账号</button>
+            <button id="game-reg-btn" onclick="doGameRegister()" style="width:100%;padding:12px;background:linear-gradient(135deg,#2ecc71,#27ae60);color:white;border:none;border-radius:8px;font-size:15px;font-weight:bold;cursor:pointer;transition:transform 0.1s,box-shadow 0.1s;transform:scale(1)">创建账号</button>
             <div style="text-align:center;margin-top:15px">
                 <span style="color:#888;font-size:12px">已有账号？</span>
                 <a onclick="switchToLogin()" style="color:#FFD700;font-size:12px;cursor:pointer;text-decoration:underline">返回登录</a>
@@ -14226,11 +14228,16 @@ function switchToLogin() {
     document.getElementById('register-form-section').style.display = 'none';
     document.getElementById('login-error-msg').style.display = 'none';
 }
+// 显示错误提示，3秒后自动消失
+function showLoginError(msg) {
+    var errEl = document.getElementById('login-error-msg');
+    if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; setTimeout(function(){ errEl.style.display = 'none'; }, 3000); }
+}
 async function doGameLogin() {
     var u = document.getElementById('game-login-user').value.trim();
     var p = document.getElementById('game-login-pass').value.trim();
     var errEl = document.getElementById('login-error-msg');
-    if (!u || !p) { errEl.textContent = '\u8bf7\u8f93\u5165\u8d26\u53f7\u548c\u5bc6\u7801'; errEl.style.display = 'block'; return; }
+    if (!u || !p) { showLoginError('请输入账号和密码'); return; }
     errEl.style.display = 'none';
     var btn = document.getElementById('game-login-btn');
     btn.textContent = '\u767b\u5f55\u4e2d...'; btn.disabled = true;
@@ -14384,9 +14391,9 @@ async function doGameRegister() {
     var p2 = document.getElementById('game-reg-pass2').value.trim();
     var nick = document.getElementById('game-reg-nick').value.trim();
     var errEl = document.getElementById('login-error-msg');
-    if (!u || !p) { errEl.textContent = '\u8bf7\u8f93\u5165\u8d26\u53f7\u548c\u5bc6\u7801'; errEl.style.display = 'block'; return; }
-    if (p !== p2) { errEl.textContent = '\u4e24\u6b21\u5bc6\u7801\u4e0d\u4e00\u81f4'; errEl.style.display = 'block'; return; }
-    if (p.length < 6) { errEl.textContent = '\u5bc6\u7801\u81f3\u5c116\u4f4d'; errEl.style.display = 'block'; return; }
+    if (!u || !p) { showLoginError('请输入账号和密码'); return; }
+    if (p !== p2) { showLoginError('两次密码不一致'); return; }
+    if (p.length < 6) { showLoginError('密码至少6位'); return; }
     errEl.style.display = 'none';
     var btn = document.getElementById('game-reg-btn');
     btn.textContent = '\u6ce8\u518c\u4e2d...'; btn.disabled = true;
@@ -14426,7 +14433,7 @@ async function doGameRegister() {
             V20_API.track('register', { method: 'password' });
         }
     } else {
-        errEl.textContent = (data && data.message) || '\u6ce8\u518c\u5931\u8d25'; errEl.style.display = 'block';
+        showLoginError((data && data.message) || '注册失败');
     }
 }
 // 登出

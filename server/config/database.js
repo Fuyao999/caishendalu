@@ -11,6 +11,8 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD || '77889900',
   database: process.env.DB_NAME || 'caishen_db',
   charset:  'utf8mb4',
+  timezone: '+08:00',  // 使用北京时区
+  dateStrings: true,  // 返回日期字符串而非Date对象
   waitForConnections: true,
   connectionLimit: 20,
   queueLimit: 0,

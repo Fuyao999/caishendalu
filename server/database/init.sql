@@ -447,5 +447,130 @@ CREATE TABLE IF NOT EXISTS cheat_detection (
   INDEX idx_severity (severity)
 ) ENGINE=InnoDB;
 
+-- ==================== 16. 代理系统 ====================
+
+-- 激活码表
+CREATE TABLE IF NOT EXISTS activation_codes (
+  id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  code            VARCHAR(19) NOT NULL UNIQUE COMMENT '16位分4组，如XXXX-XXXX-XXXX-XXXX',
+  status          ENUM('unused', 'used', 'cancelled') DEFAULT 'unused',
+  used_by         INT UNSIGNED DEFAULT NULL COMMENT '使用者玩家ID',
+  used_at         DATETIME DEFAULT NULL,
+  seller_id       INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售者玩家ID，0=公司',
+  price           DECIMAL(10,2) DEFAULT 999.00,
+  created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_status (status),
+  INDEX idx_used_by (used_by)
+) ENGINE=InnoDB;
+
+-- 代理关系表
+CREATE TABLE IF NOT EXISTS agent_relations (
+  id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  player_id       INT UNSIGNED NOT NULL COMMENT '玩家ID',
+  superior_id     INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '上级玩家ID，0=公司',
+  level           INT NOT NULL DEFAULT 1 COMMENT '1=直推, 2=间推',
+  activation_code_id INT UNSIGNED DEFAULT NULL,
+  created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_player_id (player_id),
+  INDEX idx_superior_id (superior_id)
+) ENGINE=InnoDB;
+
+-- 代理表（代理等级和团队数据）
+CREATE TABLE IF NOT EXISTS agents (
+  id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  player_id       INT UNSIGNED NOT NULL UNIQUE COMMENT '玩家ID',
+  level           INT NOT NULL DEFAULT 1 COMMENT '代理等级 Lv.1-6',
+  direct_orders   INT DEFAULT 0 COMMENT '直推客单数',
+  team_orders     INT DEFAULT 0 COMMENT '团队总客单数',
+  high_level_count INT DEFAULT 0 COMMENT '高级人数（下级代理数）',
+  status          ENUM('normal', 'frozen') DEFAULT 'normal',
+  updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_level (level),
+  INDEX idx_status (status)
+) ENGINE=InnoDB;
+
+-- 佣金配置表
+CREATE TABLE IF NOT EXISTS agent_commission_config (
+  id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  level           INT NOT NULL COMMENT '代理等级 1-6',
+  direct_commission DECIMAL(5,2) DEFAULT 18.00 COMMENT '直推佣金比例 %',
+  indirect_commission DECIMAL(5,2) DEFAULT 5.00 COMMENT '间推佣金比例 %',
+  team_bonus      DECIMAL(5,2) DEFAULT 0.00 COMMENT '团队奖金比例 %',
+  team_bonus_generations INT DEFAULT 0 COMMENT '团队奖金向下代数',
+  UNIQUE KEY uk_level (level)
+) ENGINE=InnoDB;
+
+-- 升级条件配置表
+CREATE TABLE IF NOT EXISTS agent_upgrade_config (
+  id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  target_level    INT NOT NULL COMMENT '目标等级 2-6',
+  direct_orders_required INT DEFAULT 0 COMMENT '直推单数要求',
+  team_orders_required INT DEFAULT 0 COMMENT '团队单数要求',
+  high_level_count_required INT DEFAULT 0 COMMENT '高级人数要求',
+  high_level_type INT DEFAULT 0 COMMENT '要求的高级等级（2=Lv.2, 3=Lv.3...）',
+  UNIQUE KEY uk_target_level (target_level)
+) ENGINE=InnoDB;
+
+-- 佣金表
+CREATE TABLE IF NOT EXISTS commissions (
+  id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  agent_id        INT UNSIGNED NOT NULL,
+  order_id        INT UNSIGNED NOT NULL,
+  level           INT NOT NULL DEFAULT 1 COMMENT '1=直推, 2=间推',
+  amount          DECIMAL(10,2) NOT NULL COMMENT '佣金金额',
+  type            ENUM('base', 'team_bonus') DEFAULT 'base' COMMENT '基础佣金/团队奖金',
+  status          ENUM('pending', 'settled', 'withdrawn') DEFAULT 'pending',
+  created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  settled_at      DATETIME DEFAULT NULL,
+  INDEX idx_agent_id (agent_id),
+  INDEX idx_order_id (order_id),
+  INDEX idx_status (status)
+) ENGINE=InnoDB;
+
+-- 提现表
+CREATE TABLE IF NOT EXISTS withdrawals (
+  id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  agent_id        INT UNSIGNED NOT NULL,
+  amount          DECIMAL(10,2) NOT NULL COMMENT '提现金额',
+  status          ENUM('pending', 'paid', 'rejected') DEFAULT 'pending',
+  apply_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  paid_at         DATETIME DEFAULT NULL,
+  remark          VARCHAR(255) DEFAULT NULL,
+  INDEX idx_agent_id (agent_id),
+  INDEX idx_status (status)
+) ENGINE=InnoDB;
+
+-- 订单表
+CREATE TABLE IF NOT EXISTS orders (
+  id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  buyer_id        INT UNSIGNED NOT NULL COMMENT '购买者玩家ID',
+  seller_id       INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '代理玩家ID，0=公司',
+  activation_code_id INT UNSIGNED NOT NULL,
+  amount          DECIMAL(10,2) DEFAULT 999.00,
+  status          ENUM('pending', 'paid', 'cancelled') DEFAULT 'pending',
+  created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  paid_at         DATETIME DEFAULT NULL,
+  INDEX idx_buyer_id (buyer_id),
+  INDEX idx_seller_id (seller_id),
+  INDEX idx_status (status)
+) ENGINE=InnoDB;
+
+-- ==================== 初始化代理配置数据 ====================
+
+INSERT INTO agent_commission_config (level, direct_commission, indirect_commission, team_bonus, team_bonus_generations) VALUES
+(1, 18.00, 5.00, 0.00, 0),
+(2, 18.00, 5.00, 0.00, 0),
+(3, 18.00, 5.00, 2.00, 2),
+(4, 18.00, 5.00, 2.00, 3),
+(5, 18.00, 5.00, 2.00, 4),
+(6, 18.00, 5.00, 2.00, 99);
+
+INSERT INTO agent_upgrade_config (target_level, direct_orders_required, team_orders_required, high_level_count_required, high_level_type) VALUES
+(2, 2, 5, 0, 0),
+(3, 5, 30, 2, 2),
+(4, 10, 100, 5, 3),
+(5, 15, 500, 10, 4),
+(6, 20, 2000, 20, 5);
+
 -- ==================== 完成 ====================
-SELECT 'All 24 tables created successfully!' AS result;
+SELECT 'All 30 tables created successfully!' AS result;

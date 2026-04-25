@@ -253,6 +253,170 @@ router.get('/users', adminMiddleware, async (req, res, next) => {
     }
 });
 
+// GET /api/admin/users/:id - 获取单个用户详情
+router.get('/users/:id', adminMiddleware, async (req, res, next) => {
+    try {
+        const userId = parseInt(req.params.id);
+        const [users] = await pool.query(
+            `SELECT u.id, u.username, u.status, u.created_at, u.last_login_at, u.ban_reason,
+                    p.player_id, p.nickname, p.level, p.exp, p.realm, p.realm_name,
+                    p.gold, p.yuanbao, p.merit, p.faith, p.reputation,
+                    p.daily_alms, p.daily_sign, p.sign_streak, p.total_sign,
+                    p.alms_count, p.great_count, p.alms_miss_streak, p.worship_count,
+                    p.invitation_code, p.invited_by,
+                    p.mana, p.fragments, p.online_seconds,
+                    p.banners, p.gold_paper, p.fruits, p.incense_sticks, p.candles,
+                    p.hp, p.hp_max, p.mp, p.mp_max, p.atk, p.def, p.speed, p.luck, p.charm
+             FROM users u
+             LEFT JOIN player_data p ON u.id = p.user_id
+             WHERE u.id = ?`,
+            [userId]
+        );
+        
+        if (users.length === 0) {
+            return res.json({ code: 404, message: '用户不存在' });
+        }
+        
+        res.json({ code: 200, data: users[0] });
+    } catch (e) {
+        console.error('Get user error:', e);
+        res.json({ code: 500, message: '获取用户详情失败' });
+    }
+});
+
+// POST /api/admin/users/:id/update - 更新用户数据
+router.post('/users/:id/update', adminMiddleware, async (req, res, next) => {
+    try {
+        const userId = parseInt(req.params.id);
+        const {
+            // users table fields
+            status, ban_reason,
+            // player_data fields
+            nickname, level, exp, realm, realm_name,
+            gold, yuanbao, merit, faith, reputation,
+            daily_alms, daily_sign, sign_streak,
+            alms_count, great_count, alms_miss_streak, worship_count,
+            mana, fragments, banners, gold_paper, fruits,
+            hp, hp_max, mp, mp_max, atk, def, speed, luck, charm
+        } = req.body;
+        
+        // Update users table
+        if (status !== undefined || ban_reason !== undefined) {
+            const userFields = [];
+            const userValues = [];
+            if (status !== undefined) { userFields.push('status = ?'); userValues.push(status); }
+            if (ban_reason !== undefined) { userFields.push('ban_reason = ?'); userValues.push(ban_reason); }
+            if (userFields.length > 0) {
+                userValues.push(userId);
+                await pool.query(`UPDATE users SET ${userFields.join(', ')} WHERE id = ?`, userValues);
+            }
+        }
+        
+        // Update player_data table
+        const playerFields = [];
+        const playerValues = [];
+        if (nickname !== undefined) { playerFields.push('nickname = ?'); playerValues.push(nickname); }
+        if (level !== undefined) { playerFields.push('level = ?'); playerValues.push(level); }
+        if (exp !== undefined) { playerFields.push('exp = ?'); playerValues.push(exp); }
+        if (realm !== undefined) { playerFields.push('realm = ?'); playerValues.push(realm); }
+        if (realm_name !== undefined) { playerFields.push('realm_name = ?'); playerValues.push(realm_name); }
+        if (gold !== undefined) { playerFields.push('gold = ?'); playerValues.push(gold); }
+        if (yuanbao !== undefined) { playerFields.push('yuanbao = ?'); playerValues.push(yuanbao); }
+        if (merit !== undefined) { playerFields.push('merit = ?'); playerValues.push(merit); }
+        if (faith !== undefined) { playerFields.push('faith = ?'); playerValues.push(faith); }
+        if (reputation !== undefined) { playerFields.push('reputation = ?'); playerValues.push(reputation); }
+        if (daily_alms !== undefined) { playerFields.push('daily_alms = ?'); playerValues.push(daily_alms); }
+        if (daily_sign !== undefined) { playerFields.push('daily_sign = ?'); playerValues.push(daily_sign); }
+        if (sign_streak !== undefined) { playerFields.push('sign_streak = ?'); playerValues.push(sign_streak); }
+        if (alms_count !== undefined) { playerFields.push('alms_count = ?'); playerValues.push(alms_count); }
+        if (great_count !== undefined) { playerFields.push('great_count = ?'); playerValues.push(great_count); }
+        if (alms_miss_streak !== undefined) { playerFields.push('alms_miss_streak = ?'); playerValues.push(alms_miss_streak); }
+        if (worship_count !== undefined) { playerFields.push('worship_count = ?'); playerValues.push(worship_count); }
+        if (mana !== undefined) { playerFields.push('mana = ?'); playerValues.push(mana); }
+        if (fragments !== undefined) { playerFields.push('fragments = ?'); playerValues.push(fragments); }
+        if (banners !== undefined) { playerFields.push('banners = ?'); playerValues.push(banners); }
+        if (gold_paper !== undefined) { playerFields.push('gold_paper = ?'); playerValues.push(gold_paper); }
+        if (fruits !== undefined) { playerFields.push('fruits = ?'); playerValues.push(fruits); }
+        if (hp !== undefined) { playerFields.push('hp = ?'); playerValues.push(hp); }
+        if (hp_max !== undefined) { playerFields.push('hp_max = ?'); playerValues.push(hp_max); }
+        if (mp !== undefined) { playerFields.push('mp = ?'); playerValues.push(mp); }
+        if (mp_max !== undefined) { playerFields.push('mp_max = ?'); playerValues.push(mp_max); }
+        if (atk !== undefined) { playerFields.push('atk = ?'); playerValues.push(atk); }
+        if (def !== undefined) { playerFields.push('def = ?'); playerValues.push(def); }
+        if (speed !== undefined) { playerFields.push('speed = ?'); playerValues.push(speed); }
+        if (luck !== undefined) { playerFields.push('luck = ?'); playerValues.push(luck); }
+        if (charm !== undefined) { playerFields.push('charm = ?'); playerValues.push(charm); }
+        
+        if (playerFields.length > 0) {
+            playerValues.push(userId);
+            await pool.query(`UPDATE player_data SET ${playerFields.join(', ')} WHERE user_id = ?`, playerValues);
+        }
+        
+        res.json({ code: 200, message: '更新成功' });
+    } catch (e) {
+        console.error('Update user error:', e);
+        res.json({ code: 500, message: '更新失败' });
+    }
+});
+
+// POST /api/admin/users/:id/alms-override - 更新用户化缘概率覆盖
+router.post('/users/:id/alms-override', adminMiddleware, async (req, res, next) => {
+    try {
+        const userId = parseInt(req.params.id);
+        const override = req.body; // 接收完整的覆盖配置
+        
+        // 如果 override 为空或空对象，清除覆盖
+        if (!override || Object.keys(override).length === 0) {
+            await pool.query('UPDATE player_data SET alms_override = NULL WHERE user_id = ?', [userId]);
+        } else {
+            await pool.query('UPDATE player_data SET alms_override = ? WHERE user_id = ?', 
+                [JSON.stringify(override), userId]);
+        }
+        
+        res.json({ code: 200, message: '化缘概率覆盖已更新' });
+    } catch (e) {
+        console.error('Update alms override error:', e);
+        res.json({ code: 500, message: '更新失败' });
+    }
+});
+
+// POST /api/admin/users/:id/ban - 封禁用户
+router.post('/users/:id/ban', adminMiddleware, async (req, res, next) => {
+    try {
+        const userId = parseInt(req.params.id);
+        const { reason } = req.body;
+        
+        await pool.query('UPDATE users SET status = 0 WHERE id = ?', [userId]);
+        await pool.query(
+            'INSERT INTO logs (user_id, action, detail) VALUES (?, ?, ?)',
+            [userId, 'admin_ban', JSON.stringify({ reason: reason || '管理员封禁' })]
+        );
+        
+        res.json({ code: 200, message: '封禁成功' });
+    } catch (e) {
+        console.error('Ban user error:', e);
+        res.json({ code: 500, message: '封禁失败' });
+    }
+});
+
+// POST /api/admin/users/:id/unban - 解封用户
+router.post('/users/:id/unban', adminMiddleware, async (req, res, next) => {
+    try {
+        const userId = parseInt(req.params.id);
+        
+        await pool.query('UPDATE users SET status = 1 WHERE id = ?', [userId]);
+        await pool.query(
+            'INSERT INTO logs (user_id, action, detail) VALUES (?, ?, ?)',
+            [userId, 'admin_unban', JSON.stringify({ action: '管理员解封' })]
+        );
+        
+        res.json({ code: 200, message: '解封成功' });
+    } catch (e) {
+        console.error('Unban user error:', e);
+        res.json({ code: 500, message: '解封失败' });
+    }
+});
+
 // GET /api/admin/dashboard - 获取仪表盘数据
 router.get('/dashboard', adminMiddleware, async (req, res, next) => {
     try {

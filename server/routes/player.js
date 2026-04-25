@@ -203,16 +203,16 @@ router.post('/update-nickname', authMiddleware, async (req, res, next) => {
 router.post('/update-incense', authMiddleware, async (req, res, next) => {
   try {
     const { incense_type, incense_end_at } = req.body;
-    console.log('[续香] 收到请求:', { incense_type, incense_end_at });
+
     const validTypes = ['incense', 'candle', 'paper', 'fruit'];
     const typeToSave = incense_type && validTypes.includes(incense_type) ? incense_type : null;
     if (!typeToSave) {
-      console.log('[续香] 无效类型:', incense_type);
+
       return fail(res, '无效的香火类型');
     }
     const endAtToSave = incense_end_at ? Math.floor(Number(incense_end_at)) : null;
     if (!endAtToSave || isNaN(endAtToSave)) {
-      console.log('[续香] 无效时间:', incense_end_at);
+
       return fail(res, '无效的香火结束时间');
     }
     await pool.query('UPDATE player_data SET incense_type = ?, incense_end_at = ? WHERE user_id = ?',
