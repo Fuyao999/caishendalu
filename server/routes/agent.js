@@ -264,7 +264,7 @@ async function updateTeamOrders(agentId) {
 router.post('/activate', async (req, res) => {
     try {
         const { activation_code, superior_invite_code } = req.body;
-        const userId = req.user.id;
+        const userId = req.userId;
         
         // 验证激活码
         if (!activation_code) {
@@ -401,14 +401,20 @@ router.post('/activate', async (req, res) => {
  * 获取我的代理数据
  */
 router.get('/my-data', async (req, res) => {
+    // 禁用缓存
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    
     try {
-        const userId = req.user.id;
+        console.log('[/my-data] req.user:', JSON.stringify(req.user));
+        const userId = req.userId;
+        console.log('[/my-data] userId:', userId);
         
         // 获取玩家ID
         const [userRows] = await pool.query(
             'SELECT player_id, invitation_code FROM player_data WHERE user_id = ?',
             [userId]
         );
+        console.log('[/my-data] userRows:', JSON.stringify(userRows));
         
         if (userRows.length === 0) {
             return res.json({ code: 1, message: '用户不存在' });
@@ -416,12 +422,14 @@ router.get('/my-data', async (req, res) => {
         
         const playerId = userRows[0].player_id;
         const invitationCode = userRows[0].invitation_code;
+        console.log('[/my-data] playerId:', playerId);
         
         // 获取代理信息
         const [agentRows] = await pool.query(
             'SELECT * FROM agents WHERE player_id = ?',
             [playerId]
         );
+        console.log('[/my-data] agentRows count:', agentRows.length);
         
         if (agentRows.length === 0) {
             return res.json({ 
@@ -533,7 +541,7 @@ router.get('/my-data', async (req, res) => {
  */
 router.get('/my-team', async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.userId;
         const { month } = req.query;
         
         // 获取玩家ID
@@ -612,7 +620,7 @@ router.get('/my-team', async (req, res) => {
  */
 router.post('/withdraw', async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.userId;
         const { amount } = req.body;
         
         if (!amount || amount <= 0) {
@@ -680,7 +688,7 @@ router.post('/withdraw', async (req, res) => {
  */
 router.get('/withdraw-records', async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.userId;
         
         // 获取玩家ID
         const [userRows] = await pool.query(
@@ -736,7 +744,7 @@ router.get('/withdraw-records', async (req, res) => {
  */
 router.get('/commission-records', async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.userId;
         const { limit = 50 } = req.query;
         
         // 获取玩家ID
